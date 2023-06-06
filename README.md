@@ -1,8 +1,8 @@
-# GraphHopper Maps
+# Road Safety UI
 
-A user interface for the [GraphHopper routing engine](https://github.com/graphhopper/graphhopper) released under the Apache License 2.0.
+This Maps UI with road safety integrated is based on the most recent commit as of Jun 6, 2023 of [GraphHopper Maps](https://github.com/graphhopper/graphhopper-maps). It is the official UI of [GraphHopper routing engine](https://github.com/graphhopper/graphhopper), protected under the Apache License 2.0.
 
-[Try it out](https://graphhopper.com/maps/)!
+[The official UI is deployed here.](https://graphhopper.com/maps/)!
 
 [![GraphHopper Maps route planner](https://www.graphhopper.com/wp-content/uploads/2023/03/gh-maps-202303.png)](https://graphhopper.com/maps/)
 
