@@ -42,6 +42,7 @@ import Cross from '@/sidebar/times-solid.svg'
 import PlainButton from '@/PlainButton'
 import useAreasLayer from '@/layers/UseAreasLayer'
 import useExternalMVTLayer from '@/layers/UseExternalMVTLayer'
+import useSafetyPathsLayer from './layers/UseSafetyPathsLayer'
 
 export const POPUP_CONTAINER_ID = 'popup-container'
 export const SIDEBAR_CONTENT_ID = 'sidebar-content'
@@ -107,6 +108,9 @@ export default function App() {
     usePathsLayer(map, route.routingResult.paths, route.selectedPath, query.queryPoints)
     useQueryPointsLayer(map, query.queryPoints)
     usePathDetailsLayer(map, pathDetails)
+
+    useSafetyPathsLayer(map, route.routingResult.paths, route.selectedPath);
+
     const isSmallScreen = useMediaQuery({ query: '(max-width: 44rem)' })
     return (
         <ShowDistanceInMilesContext.Provider value={settings.showDistanceInMiles}>
