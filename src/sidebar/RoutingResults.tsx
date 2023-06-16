@@ -35,6 +35,7 @@ export interface RoutingResultsProps {
     profile: string
 }
 
+// Double check the display of multiple paths
 export default function RoutingResults(props: RoutingResultsProps) {
     // for landscape orientation there is no need that there is space for the map under the 3 alternatives and so the max-height is smaller for short screen
     const isShortScreen = useMediaQuery({
