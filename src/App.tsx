@@ -48,6 +48,8 @@ export const POPUP_CONTAINER_ID = 'popup-container'
 export const SIDEBAR_CONTENT_ID = 'sidebar-content'
 
 export default function App() {
+    // Component
+    // state
     const [settings, setSettings] = useState(getSettingsStore().state)
     const [query, setQuery] = useState(getQueryStore().state)
     const [info, setInfo] = useState(getApiInfoStore().state)

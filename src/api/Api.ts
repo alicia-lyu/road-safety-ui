@@ -106,10 +106,11 @@ export class ApiImpl implements Api {
     }
 
     async route(args: RoutingArgs): Promise<RoutingResult> {
-        const completeRequest = ApiImpl.createRequest(args)
+        const completeRequest = ApiImpl.createRequest(args);
+        const completeRequest2 
 
         // fetch with multiple profiles
-        const response = await fetch(this.getRoutingURLWithKey('route').toString(), {
+        const response1 = await fetch("https://www.graphhopper.com/api/xxx", {
             method: 'POST',
             mode: 'cors',
             body: JSON.stringify(completeRequest),
@@ -118,6 +119,10 @@ export class ApiImpl implements Api {
                 'Content-Type': 'application/json',
             },
         })
+
+        const response2 // fetch a different profile
+
+        const response3 // 
 
         if (response.ok) {
             // parse from json
