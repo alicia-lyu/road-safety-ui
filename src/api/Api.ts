@@ -106,11 +106,11 @@ export class ApiImpl implements Api {
     }
 
     async route(args: RoutingArgs): Promise<RoutingResult> {
-        const completeRequest = ApiImpl.createRequest(args);
-        const completeRequest2 
-
+        const completeRequest = ApiImpl.createRequest(args)
+        const completeRequest2 = ApiImpl.createRequest(args)
+        const completeRequest3 = ApiImpl.createRequest(args)
         // fetch with multiple profiles
-        const response1 = await fetch("https://www.graphhopper.com/api/xxx", {
+        const response = await fetch(this.getRoutingURLWithKey('route').toString(), {
             method: 'POST',
             mode: 'cors',
             body: JSON.stringify(completeRequest),
@@ -119,24 +119,52 @@ export class ApiImpl implements Api {
                 'Content-Type': 'application/json',
             },
         })
-
-        const response2 // fetch a different profile
-
-        const response3 // 
-
-        if (response.ok) {
+        
+        const response2 = await fetch(this.getRoutingURLWithKey('route').toString(), {
+            method: 'POST',
+            mode: 'cors',
+            body: JSON.stringify(completeRequest2),
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+        });
+        
+        const response3 = await fetch(this.getRoutingURLWithKey('route').toString(), {
+            method: 'POST',
+            mode: 'cors',
+            body: JSON.stringify(completeRequest3),
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+        });
+        if (response.ok && response2.ok && response3.ok) {
             // parse from json
             const rawResult = (await response.json()) as RawResult
-
+            console.log('Response JSON:', rawResult);
+            const rawResult2 = (await response2.json()) as RawResult
+            console.log('Response2 JSON:', rawResult2);
+            const rawResult3 = (await response3.json()) as RawResult
             // transform encoded points into decoded
+            //return {
+                //...rawResult,
+                //paths: ApiImpl.decodeResult(rawResult, completeRequest.elevation),
+                
+            //}
             return {
                 ...rawResult,
-                paths: ApiImpl.decodeResult(rawResult, completeRequest.elevation),
+            paths: [
+                ...ApiImpl.decodeResult(rawResult, completeRequest.elevation),
+                ...ApiImpl.decodeResult(rawResult2, completeRequest2.elevation),
+                ...ApiImpl.decodeResult(rawResult3, completeRequest2.elevation),
+            ], 
             }
-        } else if (response.status === 500) {
+
+        } else if (response.status === 500 || response2.status === 500 || response3.status === 500) {
             // not always true, but most of the time :)
             throw new Error(tr('route_timed_out'))
-        } else if (response.status === 400) {
+        } else if (response.status === 400 || response2.status === 400 || response3.status === 400) {
             const errorResult = (await response.json()) as ErrorResponse
             let message = errorResult.message
             if (errorResult.hints && errorResult.hints.length > 0) {
