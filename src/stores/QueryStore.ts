@@ -287,25 +287,11 @@ export default class QueryStore extends Store<QueryStoreState> {
             }
             return this.routeIfReady(newState, true)
         } else if (action instanceof ToggleSafeRoutingEnabled) {
-            // Up to 3 profiles can be used in a single reqeust
-            // const profiles = [
-            //     {
-            //         name: "car",
-            //         weighting: "fastest"
-            //     }, {
-            //         name: "car",
-            //         weighting: "shortest"
-            //     }, {
-            //         name: "car",
-            //         weighting: "short_fastest"
-            //     }
-            // ]
             const newState: QueryStoreState = {
                 ...state,
-                // profiles: profiles,
-                // routingProfile: profiles[0],
                 safeRoutingEnabled: !state.safeRoutingEnabled,
-                maxAlternativeRoutes: state.safeRoutingEnabled ? 4 : 3
+                maxAlternativeRoutes: state.safeRoutingEnabled ? 4 : 3,
+                customModelEnabled: !state.safeRoutingEnabled
             }
             return this.routeIfReady(newState, true)
         }
@@ -331,41 +317,43 @@ export default class QueryStore extends Store<QueryStoreState> {
         if (QueryStore.isReadyToRoute(state)) {
             let requests
             const maxDistance = getMaxDistance(state.queryPoints)
-            if (state.customModelEnabled) {
-                if (maxDistance < 200_000) {
-                    // Use a single request, possibly including alternatives when custom models are enabled.
-                    requests = [QueryStore.buildRouteRequest(state)]
-                } else if (maxDistance < 500_000) {
-                    // Force no alternatives for longer custom model routes.
+            if (!state.safeRoutingEnabled) {
+                if (state.customModelEnabled) {
+
+                    if (maxDistance < 200_000) {
+                        // Use a single request, possibly including alternatives when custom models are enabled.
+                        requests = [QueryStore.buildRouteRequest(state)]
+                    } else if (maxDistance < 500_000) {
+                        // Force no alternatives for longer custom model routes.
+                        requests = [
+                            QueryStore.buildRouteRequest({
+                                ...state,
+                                maxAlternativeRoutes: 1,
+                            }),
+                        ]
+                    } else {
+                        // Custom model requests with large distances take too long, so we just error.
+                        // later: better usability if we just remove ch.disable? i.e. the request always succeeds
+                        Dispatcher.dispatch(
+                            new ErrorAction(
+                                'Using the custom model feature is unfortunately not ' +
+                                'possible when the request points are further than ' +
+                                // todo: use settings#showDistanceInMiles, but not sure how to use state from another store here
+                                metersToText(500_000, false) +
+                                ' apart.'
+                            )
+                        )
+                        return state
+                    }
+                } else {
                     requests = [
+                        // We first send a fast request without alternatives with default model...
                         QueryStore.buildRouteRequest({
                             ...state,
                             maxAlternativeRoutes: 1,
+                            customModelEnabled: false
                         }),
                     ]
-                } else {
-                    // Custom model requests with large distances take too long, so we just error.
-                    // later: better usability if we just remove ch.disable? i.e. the request always succeeds
-                    Dispatcher.dispatch(
-                        new ErrorAction(
-                            'Using the custom model feature is unfortunately not ' +
-                            'possible when the request points are further than ' +
-                            // todo: use settings#showDistanceInMiles, but not sure how to use state from another store here
-                            metersToText(500_000, false) +
-                            ' apart.'
-                        )
-                    )
-                    return state
-                }
-            } else {
-                requests = [
-                    // We first send a fast request without alternatives ...
-                    QueryStore.buildRouteRequest({
-                        ...state,
-                        maxAlternativeRoutes: 1,
-                    }),
-                ]
-                if (!state.safeRoutingEnabled) {
                     // ... and then a second, slower request including alternatives if they are enabled.
                     if (
                         state.queryPoints.length === 2 &&
@@ -373,17 +361,53 @@ export default class QueryStore extends Store<QueryStoreState> {
                         (ApiImpl.isMotorVehicle(state.routingProfile.name) || maxDistance < 500_000)
                     )
                         requests.push(QueryStore.buildRouteRequest(state))
-                } else {
-                    // When safe routing mode is enabled, send multiple requests with different profiles, 
-                    // laying the ground for re-ranking according to safety
-                    // for (let i of [1, 2]) {
-                    //     requests.push(QueryStore.buildRouteRequest({
-                    //         ...state,
-                    //         routingProfile: state.profiles[i]
-                    //     }))
-                    // }
-                    requests.push(QueryStore.buildRouteRequest(state))
                 }
+            } else {
+                // with safe routing mode
+                // state.customModelEnabled should be set to false
+                requests = [
+                    // We first send a fast request without alternatives 
+                    // with default model (distance_influence = 15)
+                    // which returns a result of fastest
+                    QueryStore.buildRouteRequest({
+                        ...state,
+                        maxAlternativeRoutes: 1,
+                    }),
+                ]
+
+                // then a second, slower request including alternatives (max. 4 in total)
+                // with default model (distance_influence = 15)
+                // but without CM in this stage because requests with CM are easily timed out
+                requests.push(QueryStore.buildRouteRequest({
+                    ...state,
+                    maxAlternativeRoutes: 2
+                }))
+
+                // An additional including an alternative with the shortest result 
+                // if alternative routes are less than 4
+                const shortestCM = {
+                    distance_influence: 100
+                }
+                requests.push(QueryStore.buildRouteRequest({
+                    ...state,
+                    customModelEnabled: true,
+                    customModelStr: customModel2prettyString(shortestCM),
+                    maxAlternativeRoutes: 3
+                }))
+
+                // An additional including an alternative with the short-fastest result 
+                // if alternative routes are less than 4
+                const shortFastestCM = {
+                    distance_influence: 70
+                }
+                requests.push(QueryStore.buildRouteRequest({
+                    ...state,
+                    customModelEnabled: true,
+                    customModelStr: customModel2prettyString(shortFastestCM),
+                    maxAlternativeRoutes: 4
+                }))
+
+                // TODO: Edit maxAlternativeRoutes
             }
 
             return {
@@ -402,7 +426,9 @@ export default class QueryStore extends Store<QueryStoreState> {
             }
         })
 
-        subRequests.forEach((subRequest, i) => this.api.routeWithDispatch(subRequest.args, i == 0 ? zoom : false))
+        subRequests.forEach((subRequest, i) => {
+            this.api.routeWithDispatch(subRequest.args, i == 0 ? zoom : false)
+        })
         return subRequests
     }
 

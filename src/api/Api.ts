@@ -155,6 +155,7 @@ export class ApiImpl implements Api {
         const routeNumber = this.routeCounter++
         this.route(args)
             .then(result => {
+                console.log("Sent a new subrequest with distance_influence of " + args.customModel?.distance_influence)
                 if (routeNumber > this.lastRouteNumber) {
                     this.lastRouteNumber = routeNumber
                     Dispatcher.dispatch(new RouteRequestSuccess(args, zoomOnSuccess, result))
