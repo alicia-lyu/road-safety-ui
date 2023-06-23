@@ -17,6 +17,7 @@ import {
     SetPoint,
     SetQueryPoints,
     SetVehicleProfile,
+    ToggleSafeRoutingEnabled
 } from '@/actions/Actions'
 import { Bbox, RoutingArgs, RoutingProfile } from '@/api/graphhopper'
 import { calcDist } from '@/distUtils'
@@ -41,6 +42,7 @@ export interface QueryStoreState {
     readonly routingProfile: RoutingProfile
     readonly customModelEnabled: boolean
     readonly customModelStr: string
+    readonly safeRoutingEnabled: boolean
 }
 
 export interface QueryPoint {
@@ -95,7 +97,7 @@ export default class QueryStore extends Store<QueryStoreState> {
         // prettify the custom model if it can be parsed or leave it as is otherwise
         try {
             initialCustomModelStr = customModel2prettyString(JSON.parse(initialCustomModelStr))
-        } catch (e) {}
+        } catch (e) { }
 
         return {
             profiles: [],
@@ -107,12 +109,13 @@ export default class QueryStore extends Store<QueryStoreState> {
             currentRequest: {
                 subRequests: [],
             },
-            maxAlternativeRoutes: 3,
+            maxAlternativeRoutes: 4,
             routingProfile: {
                 name: '',
             },
             customModelEnabled: customModelEnabledInitially,
             customModelStr: initialCustomModelStr,
+            safeRoutingEnabled: true
         }
     }
 
@@ -283,6 +286,28 @@ export default class QueryStore extends Store<QueryStoreState> {
                 customModelEnabled: action.enabled,
             }
             return this.routeIfReady(newState, true)
+        } else if (action instanceof ToggleSafeRoutingEnabled) {
+            // Up to 3 profiles can be used in a single reqeust
+            // const profiles = [
+            //     {
+            //         name: "car",
+            //         weighting: "fastest"
+            //     }, {
+            //         name: "car",
+            //         weighting: "shortest"
+            //     }, {
+            //         name: "car",
+            //         weighting: "short_fastest"
+            //     }
+            // ]
+            const newState: QueryStoreState = {
+                ...state,
+                // profiles: profiles,
+                // routingProfile: profiles[0],
+                safeRoutingEnabled: !state.safeRoutingEnabled,
+                maxAlternativeRoutes: state.safeRoutingEnabled ? 4 : 3
+            }
+            return this.routeIfReady(newState, true)
         }
         return state
     }
@@ -324,10 +349,10 @@ export default class QueryStore extends Store<QueryStoreState> {
                     Dispatcher.dispatch(
                         new ErrorAction(
                             'Using the custom model feature is unfortunately not ' +
-                                'possible when the request points are further than ' +
-                                // todo: use settings#showDistanceInMiles, but not sure how to use state from another store here
-                                metersToText(500_000, false) +
-                                ' apart.'
+                            'possible when the request points are further than ' +
+                            // todo: use settings#showDistanceInMiles, but not sure how to use state from another store here
+                            metersToText(500_000, false) +
+                            ' apart.'
                         )
                     )
                     return state
@@ -340,13 +365,25 @@ export default class QueryStore extends Store<QueryStoreState> {
                         maxAlternativeRoutes: 1,
                     }),
                 ]
-                // ... and then a second, slower request including alternatives if they are enabled.
-                if (
-                    state.queryPoints.length === 2 &&
-                    state.maxAlternativeRoutes > 1 &&
-                    (ApiImpl.isMotorVehicle(state.routingProfile.name) || maxDistance < 500_000)
-                )
+                if (!state.safeRoutingEnabled) {
+                    // ... and then a second, slower request including alternatives if they are enabled.
+                    if (
+                        state.queryPoints.length === 2 &&
+                        state.maxAlternativeRoutes > 1 &&
+                        (ApiImpl.isMotorVehicle(state.routingProfile.name) || maxDistance < 500_000)
+                    )
+                        requests.push(QueryStore.buildRouteRequest(state))
+                } else {
+                    // When safe routing mode is enabled, send multiple requests with different profiles, 
+                    // laying the ground for re-ranking according to safety
+                    // for (let i of [1, 2]) {
+                    //     requests.push(QueryStore.buildRouteRequest({
+                    //         ...state,
+                    //         routingProfile: state.profiles[i]
+                    //     }))
+                    // }
                     requests.push(QueryStore.buildRouteRequest(state))
+                }
             }
 
             return {
@@ -445,7 +482,7 @@ export default class QueryStore extends Store<QueryStoreState> {
         if (state.customModelEnabled)
             try {
                 customModel = JSON.parse(state.customModelStr)
-            } catch {}
+            } catch { }
 
         return {
             points: coordinates,

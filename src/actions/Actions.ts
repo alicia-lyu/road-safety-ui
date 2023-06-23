@@ -247,3 +247,5 @@ export class DrawAreas implements Action {
         this.enabled = enabled
     }
 }
+
+export class ToggleSafeRoutingEnabled implements Action {}

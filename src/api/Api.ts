@@ -110,7 +110,7 @@ export class ApiImpl implements Api {
         const completeRequest = ApiImpl.createRequest(args);
 
         // fetch with multiple profiles
-        const response = await fetch("https://www.graphhopper.com/api/xxx", {
+        const response = await fetch(this.getRoutingURLWithKey('route').toString(), {
             method: 'POST',
             mode: 'cors',
             body: JSON.stringify(completeRequest),
