@@ -290,8 +290,7 @@ export default class QueryStore extends Store<QueryStoreState> {
             const newState: QueryStoreState = {
                 ...state,
                 safeRoutingEnabled: !state.safeRoutingEnabled,
-                maxAlternativeRoutes: state.safeRoutingEnabled ? 4 : 3,
-                customModelEnabled: !state.safeRoutingEnabled
+                customModelEnabled: state.safeRoutingEnabled
             }
             return this.routeIfReady(newState, true)
         }
@@ -383,30 +382,15 @@ export default class QueryStore extends Store<QueryStoreState> {
                     maxAlternativeRoutes: 2
                 }))
 
-                // An additional including an alternative with the shortest result 
-                // if alternative routes are less than 4
-                const shortestCM = {
-                    distance_influence: 100
+                for (let key of Object.keys(customModelExamples)) {
+                    const customModel = customModelExamples[key]
+                    requests.push(QueryStore.buildRouteRequest({
+                        ...state,
+                        maxAlternativeRoutes: state.maxAlternativeRoutes+1,
+                        customModelEnabled: true,
+                        customModelStr: customModel2prettyString(customModel)
+                    }))
                 }
-                requests.push(QueryStore.buildRouteRequest({
-                    ...state,
-                    customModelEnabled: true,
-                    customModelStr: customModel2prettyString(shortestCM),
-                    maxAlternativeRoutes: 3
-                }))
-
-                // An additional including an alternative with the short-fastest result 
-                // if alternative routes are less than 4
-                const shortFastestCM = {
-                    distance_influence: 70
-                }
-                requests.push(QueryStore.buildRouteRequest({
-                    ...state,
-                    customModelEnabled: true,
-                    customModelStr: customModel2prettyString(shortFastestCM),
-                    maxAlternativeRoutes: 4
-                }))
-
                 // TODO: Edit maxAlternativeRoutes
             }
 
