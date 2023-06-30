@@ -1,257 +1,360 @@
-import { Feature, Map } from 'ol'
-import { Path } from '@/api/graphhopper'
-import { FeatureCollection } from 'geojson'
-import { useEffect } from 'react'
-import VectorLayer from 'ol/layer/Vector'
-import VectorSource from 'ol/source/Vector'
-import { GeoJSON } from 'ol/format'
-import { Stroke, Style } from 'ol/style'
-import { fromLonLat } from 'ol/proj'
-import Text from 'ol/style/Text.js'
-import Overlay from 'ol/Overlay'
+import Dispatcher from '@/stores/Dispatcher'
+import { RouteRequestFailed, RouteRequestSuccess } from '@/actions/Actions'
+import {
+    ApiInfo,
+    Bbox,
+    ErrorResponse,
+    GeocodingResult,
+    Path,
+    RawPath,
+    RawResult,
+    RoutingArgs,
+    RoutingProfile,
+    RoutingRequest,
+    RoutingResult,
+} from '@/api/graphhopper'
+import { LineString } from 'geojson'
+import { getTranslation, tr } from '@/translation/Translation'
+import * as config from 'config'
 
+interface ApiProfile {
+    name: string
+}
 
-const safetyPathsLayerKey = 'safetyPathsLayer'
-const selectedSafetyPathLayerKey = 'selectedSafetyPathLayer'
-let rankList : number[] = []
-let ratio = 0.5
+export default interface Api {
+    info(): Promise<ApiInfo>
 
-export default function useSafetyPathsLayer(map: Map, paths: Path[], selectedPath: Path) {
-  useEffect(() => {
-    removeCurrentSafetyPathLayers(map)
-    rankList = rankPaths(paths)
-    addUnselectedSafetyPathsLayer(map, paths.filter(p => p !== selectedPath))
-    addSelectedSafetyPathsLayer(map, selectedPath)
-    return () => {
-      removeCurrentSafetyPathLayers(map)
+    route(args: RoutingArgs): Promise<RoutingResult>
+
+    routeWithDispatch(args: RoutingArgs, zoom: boolean): void
+
+    geocode(query: string, provider: string): Promise<GeocodingResult>
+
+    supportsGeocoding(): boolean
+}
+
+let api: Api | undefined
+
+export function setApi(routingApi: string, geocodingApi: string, apiKey: string) {
+    api = new ApiImpl(routingApi, geocodingApi, apiKey)
+}
+
+export function getApi() {
+    if (!api) throw Error('Api must be initialized before it can be used. Use "setApi" when starting the app')
+    return api
+}
+
+/**
+ * Exporting this so that it can be tested directly. Don't know how to properly set this up in typescript, so that the
+ * class could be tested but is not available for usage in the app. In Java one would make this package private I guess.
+ */
+export class ApiImpl implements Api {
+    private readonly apiKey: string
+    private readonly routingApi: string
+    private readonly geocodingApi: string
+    private routeCounter = 0
+    private lastRouteNumber = -1
+
+    constructor(routingApi: string, geocodingApi: string, apiKey: string) {
+        this.apiKey = apiKey
+        this.routingApi = routingApi
+        this.geocodingApi = geocodingApi
     }
-  }, [map, paths, selectedPath])
-  createSlider(map, paths)
-}
 
-function rankPaths(paths: Path[]) {
-  const rankArray: number[] = [];
-  let bestRank = 0;
-  let bestPath: Path | null = null;
+    async info(): Promise<ApiInfo> {
+        const response = await fetch(this.getRoutingURLWithKey('info').toString(), {
+            headers: { Accept: 'application/json' },
+        }).catch(() => {
+            throw new Error('Could not connect to the Service. Try to reload!')
+        })
 
-  paths.forEach((path) => {
-    let feature = new GeoJSON().readFeatures(createSelectedPath(path))
-    let averageNum = feature[0].getProperties().averageNumber
-    let distance = path.distance
-    if (averageNum !== undefined) {
-      let rank = distance*0.5 + averageNum*0.5
-      if (rank >= bestRank) {
-        bestPath = path;
-        bestRank = rank;
-      }
-      rankArray.push(rank);
-    }
-  });
-  rankArray.sort((a, b) => b - a)
-  console.log(rankArray)
-  return rankArray;
-}
-
-function removeCurrentSafetyPathLayers(map: Map) {
-  map.getLayers()
-    .getArray()
-    .filter(l => l.get(safetyPathsLayerKey) || l.get(selectedSafetyPathLayerKey))
-    .forEach(l => map.removeLayer(l))
-}
-
-function addUnselectedSafetyPathsLayer(map: Map, paths: Path[]) {
-  const style = new Style({
-    stroke: new Stroke({
-      color: '#d70015',
-      width: 5,
-      lineCap: 'round',
-      lineJoin: 'round',
-    }),
-  })
-
-  const layer = new VectorLayer({
-    source: new VectorSource({
-      features: new GeoJSON().readFeatures(createUnselectedPaths(paths)),
-    }),
-    style: (feature) => {
-      const segmentNumber = feature.get('segmentNumber')
-      const color = getSafetyColor(segmentNumber)
-      style.getStroke().setColor(color)
-      return style
-    },
-    opacity: 1,
-  })
-  layer.set(safetyPathsLayerKey, true)
-  layer.setZIndex(1.1)
-  map.addLayer(layer)
-}
-
-function addSelectedSafetyPathsLayer(map: Map, selectedPath: Path) {
-  const style = new Style({
-    stroke: new Stroke({
-      color: '#d70015',
-      width: 14,
-      lineCap: 'round',
-      lineJoin: 'round',
-    }),
-    text: new Text({
-      text: "",
-      textAlign: 'center',
-      textBaseline: 'middle',
-      offsetY: -10,
-      offsetX: 10,
-      stroke: new Stroke({ color: '#ffffff', width: 2 }),
-    }),
-  })
-
-  const selectedLayer = new VectorLayer({
-    source: new VectorSource({
-      features: new GeoJSON().readFeatures(createSelectedPath(selectedPath)),
-    }),
-    style: (feature) => {
-      let numSelectedPath = selectedPath.distance*0.5+feature.get('averageNumber')*0.5
-      let rank = 0
-      rankList.forEach((num, index)=>{
-        if(num==numSelectedPath){
-          rank = index+1
+        const result = await response.json()
+        if (response.ok) {
+            return ApiImpl.convertToApiInfo(result)
+        } else {
+            if (result.message) throw new Error(result.message)
+            throw new Error(
+                'There has been an error. Server responded with ' + response.statusText + ' (' + response.status + ')'
+            )
         }
-      })
-      const segmentNumber = feature.get('segmentNumber')
-      const color = getSafetyColor(segmentNumber)
-      style.getText().setText(segmentNumber.toString() + ' (safe rank: ' + rank + ')');
-      style.getStroke().setColor(color)
-      return style
-    },
-    opacity: 1,
-  })
+    }
 
- 
-  selectedLayer.set(safetyPathsLayerKey, true);
-  selectedLayer.setZIndex(1.2);
-  map.addLayer(selectedLayer);
+    async geocode(query: string, provider: string): Promise<GeocodingResult> {
+        if (!this.supportsGeocoding())
+            return {
+                hits: [],
+                took: 0,
+            }
+        const url = this.getGeocodingURLWithKey('geocode')
+        url.searchParams.append('q', query)
+        url.searchParams.append('provider', provider)
+        const langAndCountry = getTranslation().getLang().split('_')
+        url.searchParams.append('locale', langAndCountry.length > 0 ? langAndCountry[0] : 'en')
 
-}
+        const response = await fetch(url.toString(), {
+            headers: { Accept: 'application/json' },
+        })
 
+        if (response.ok) {
+            return (await response.json()) as GeocodingResult
+        } else {
+            throw new Error('Geocoding went wrong ' + response.status)
+        }
+    }
 
-function createUnselectedPaths(paths: Path[]) {
-  const featureCollection: FeatureCollection = {
-    type: 'FeatureCollection',
-    features: paths.flatMap((path) => {
-      let coordinates = path.points.coordinates.map(c => fromLonLat(c))
+    supportsGeocoding(): boolean {
+        return this.geocodingApi !== ''
+    }
 
-      return coordinates.slice(0, -1).map((c, i) => {
-        const segmentCoordinates = [c, coordinates[i + 1]]
-        const segmentNumber = i % 6 // Assign a unique segment number to each segment
+    async route(args: RoutingArgs): Promise<RoutingResult> {
+        const completeRequest = ApiImpl.createRequest(args);
+
+        // fetch with multiple profiles
+        const response = await fetch(this.getRoutingURLWithKey('route').toString(), {
+            method: 'POST',
+            mode: 'cors',
+            body: JSON.stringify(completeRequest),
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+        })
+
+        if (response.ok) {
+            // parse from json
+            const rawResult = (await response.json()) as RawResult
+
+            // transform encoded points into decoded
+            return {
+                ...rawResult,
+                paths: ApiImpl.decodeResult(rawResult, completeRequest.elevation),
+            }
+        } else if (response.status === 500) {
+            // not always true, but most of the time :)
+            throw new Error(tr('route_timed_out'))
+        } else if (response.status === 400) {
+            const errorResult = (await response.json()) as ErrorResponse
+            let message = errorResult.message
+            if (errorResult.hints && errorResult.hints.length > 0) {
+                let messagesFromHints = ''
+                errorResult.hints.forEach(hint => {
+                    if (!hint.message.includes(message)) {
+                        messagesFromHints += (messagesFromHints ? ' and ' : '') + messagesFromHints
+                        messagesFromHints += hint.message
+                    }
+                })
+                if (messagesFromHints) message += (message ? ' and ' : '') + messagesFromHints
+            }
+            throw new Error(message)
+        } else {
+            throw new Error(tr('route_request_failed'))
+        }
+    }
+
+    routeWithDispatch(args: RoutingArgs, zoomOnSuccess: boolean) {
+        const routeNumber = this.routeCounter++
+        this.route(args)
+            .then(result => {
+                console.log("Sent a new subrequest with custom model: " + JSON.stringify(args.customModel))
+                if (routeNumber > this.lastRouteNumber) {
+                    this.lastRouteNumber = routeNumber
+                    Dispatcher.dispatch(new RouteRequestSuccess(args, zoomOnSuccess, result))
+                } else {
+                    const tmp = JSON.stringify(args) + ' ' + routeNumber + ' <= ' + this.lastRouteNumber
+                    console.log('Ignore response of earlier started route ' + tmp)
+                }
+            })
+            .catch(error => {
+                if (routeNumber > this.lastRouteNumber) {
+                    console.warn('error when performing /route request ' + routeNumber + ': ', error)
+                    this.lastRouteNumber = routeNumber
+                    Dispatcher.dispatch(new RouteRequestFailed(args, error.message))
+                } else {
+                    const tmp = JSON.stringify(args) + ' ' + routeNumber + ' <= ' + this.lastRouteNumber
+                    console.log('Ignore error ' + error.message + ' of earlier started route ' + tmp)
+                }
+            })
+    }
+
+    private getRoutingURLWithKey(endpoint: string) {
+        const url = new URL(this.routingApi + endpoint)
+        url.searchParams.append('key', this.apiKey)
+        return url
+    }
+
+    private getGeocodingURLWithKey(endpoint: string) {
+        const url = new URL(this.geocodingApi + endpoint)
+        url.searchParams.append('key', this.apiKey)
+        return url
+    }
+
+    static createRequest(args: RoutingArgs): RoutingRequest {
+        let profileConfig = config.profiles ? (config.profiles as any)[args.profile] : {}
+        let details = config.request?.details ? config.request.details : []
+        // don't query all path details for all profiles (e.g. foot_network and get_off_bike are not enabled for motor vehicles)
+        if (profileConfig?.details) details = [...details, ...profileConfig.details] // don't modify original arrays!
+
+        const request: RoutingRequest = {
+            points: args.points,
+            profile: args.profile,
+            elevation: true,
+            debug: false,
+            instructions: true,
+            locale: getTranslation().getLang(),
+            optimize: 'false',
+            points_encoded: true,
+            snap_preventions: config.request?.snapPreventions ? config.request.snapPreventions : [],
+            ...profileConfig,
+            details: details,
+        }
+
+        if (args.customModel) {
+            request.custom_model = args.customModel
+            request['ch.disable'] = true
+        }
+
+        if (args.points.length <= 2 && args.maxAlternativeRoutes > 1 && !(request as any)['curbsides']) {
+            return {
+                ...request,
+                'alternative_route.max_paths': args.maxAlternativeRoutes,
+                algorithm: 'alternative_route',
+            }
+        }
+        return request
+    }
+
+    static convertToApiInfo(response: any): ApiInfo {
+        let bbox = [0, 0, 0, 0] as Bbox
+        let version = ''
+        const profiles: RoutingProfile[] = []
+
+        for (const profileIndex in response.profiles as ApiProfile[]) {
+            const profile: RoutingProfile = {
+                name: response.profiles[profileIndex].name,
+            }
+
+            profiles.push(profile)
+        }
+
+        for (const property in response) {
+            if (property === 'bbox') bbox = response[property]
+            else if (property === 'version') version = response[property]
+        }
+
         return {
-          type: 'Feature',
-          properties: {
-            segmentNumber: segmentNumber,
-          },
-          geometry: {
-            type: 'LineString',
-            coordinates: segmentCoordinates,
-          },
+            profiles: profiles,
+            elevation: response.elevation,
+            bbox: bbox,
+            version: version,
+            encoded_values: response.encoded_values,
         }
-      })
-    }),
-  }
-  return featureCollection
-}
-
-function createSelectedPath(path: Path) {
-  const segmentCount = path.points.coordinates.length - 1;
-  let sumSegmentNumber = 0;
-
-  const featureCollection: FeatureCollection = {
-    type: 'FeatureCollection',
-    features: path.points.coordinates.slice(0, -1).map((c, i) => {
-      const segmentCoordinates = [fromLonLat(c), fromLonLat(path.points.coordinates[i + 1])];
-      const segmentNumber = i % 6; // Assign a unique segment number to each segment
-
-      sumSegmentNumber += segmentNumber;
-
-      return {
-        type: 'Feature',
-        properties: {
-          segmentNumber: segmentNumber,
-          averageNumber: 0, // Placeholder, will be updated later
-          rank: 0,// Placeholder, will be updated later
-        },
-        geometry: {
-          type: 'LineString',
-          coordinates: segmentCoordinates,
-        },
-      };
-    }),
-  };
-
-  // Calculate average number
-  const averageNumber = segmentCount > 0 ? sumSegmentNumber / segmentCount : 0;
-
-  // Update averageNumber property in each feature
-  featureCollection.features.forEach((feature) => {
-    if(feature.properties){
-      feature.properties.averageNumber = averageNumber;
     }
-  })
-  return featureCollection;
+
+    private static decodeResult(result: RawResult, is3D: boolean) {
+        return result.paths
+            .map((path: RawPath) => {
+                return {
+                    ...path,
+                    points: ApiImpl.decodePoints(path, is3D),
+                    snapped_waypoints: ApiImpl.decodeWaypoints(path, is3D),
+                } as Path
+            })
+            .map((path: Path) => {
+                return {
+                    ...path,
+                    instructions: ApiImpl.setPointsOnInstructions(path),
+                }
+            })
+    }
+
+    private static decodePoints(path: RawPath, is3D: boolean) {
+        if (path.points_encoded)
+            return {
+                type: 'LineString',
+                coordinates: ApiImpl.decodePath(path.points as string, is3D),
+            }
+        else return path.points as LineString
+    }
+
+    private static decodeWaypoints(path: RawPath, is3D: boolean) {
+        if (path.points_encoded)
+            return {
+                type: 'LineString',
+                coordinates: ApiImpl.decodePath(path.snapped_waypoints as string, is3D),
+            }
+        else return path.snapped_waypoints as LineString
+    }
+
+    private static setPointsOnInstructions(path: Path) {
+        if (path.instructions) {
+            return path.instructions.map(instruction => {
+                return {
+                    ...instruction,
+                    points: path.points.coordinates.slice(instruction.interval[0], instruction.interval[1] + 1),
+                }
+            })
+        } else {
+            return path.instructions
+        }
+    }
+
+    private static decodePath(encoded: string, is3D: boolean): number[][] {
+        const len = encoded.length
+        let index = 0
+        const array: number[][] = []
+        let lat = 0
+        let lng = 0
+        let ele = 0
+
+        while (index < len) {
+            let b
+            let shift = 0
+            let result = 0
+            do {
+                b = encoded.charCodeAt(index++) - 63
+                result |= (b & 0x1f) << shift
+                shift += 5
+            } while (b >= 0x20)
+            const deltaLat = result & 1 ? ~(result >> 1) : result >> 1
+            lat += deltaLat
+
+            shift = 0
+            result = 0
+            do {
+                b = encoded.charCodeAt(index++) - 63
+                result |= (b & 0x1f) << shift
+                shift += 5
+            } while (b >= 0x20)
+            const deltaLon = result & 1 ? ~(result >> 1) : result >> 1
+            lng += deltaLon
+
+            if (is3D) {
+                // elevation
+                shift = 0
+                result = 0
+                do {
+                    b = encoded.charCodeAt(index++) - 63
+                    result |= (b & 0x1f) << shift
+                    shift += 5
+                } while (b >= 0x20)
+                const deltaEle = result & 1 ? ~(result >> 1) : result >> 1
+                ele += deltaEle
+                array.push([lng * 1e-5, lat * 1e-5, ele / 100])
+            } else array.push([lng * 1e-5, lat * 1e-5])
+        }
+        return array
+    }
+
+    public static isBikeLike(profile: string) {
+        return profile.includes('mtb') || profile.includes('bike')
+    }
+
+    public static isMotorVehicle(profile: string) {
+        return profile.includes('car') || profile.includes('truck') || profile.includes('scooter')
+    }
+
+    public static isTruck(profile: string) {
+        return profile.includes('truck')
+    }
 }
 
-
-function getSafetyColor(segmentNumber: number) {
-  const colors = [
-    '#ffa500', // Orange
-    '#ffff00', // Yellow
-    '#008000', // Green
-    '#0000ff', // Blue
-    '#800080', // Purple
-  ]
-  return colors[segmentNumber]
-}
-
-function createButton(text: string, onClick: () => void): HTMLButtonElement {
-  const button = document.createElement('button');
-  button.innerHTML = text;
-  button.addEventListener('click', onClick);
-  return button;
-}
-
-function createSlider(map:Map, paths:Path[]) {
-  const sliderContainer = document.createElement('div');
-  sliderContainer.className = 'slider-container';
-
-  const slider = document.createElement('input');
-  slider.type = 'range';
-  slider.min = '0';
-  slider.max = '1';
-  slider.value = '0.2';
-  slider.step = '0.1';
-  slider.className = 'slider';
-
-  const label = document.createElement('label');
-  label.innerHTML = 'Slider';
-
-  const selectButton = createButton('Select the top safe path', () => {
-    
-    paths.forEach(path=>{
-      let feature = new GeoJSON().readFeatures(createSelectedPath(path))
-      let averageNum = feature[0].getProperties().averageNumber
-      let distance = path.distance
-      let index = rankList.findIndex((num) => num === 0.5*averageNum+0.5*distance);
-      if(index==0){
-        addSelectedSafetyPathsLayer(map, path);
-      }
-    })
-  });
-
-  sliderContainer.appendChild(label);
-  sliderContainer.appendChild(slider);
-  sliderContainer.appendChild(selectButton);
-
-  slider.addEventListener('input', (event) => {
-    ratio = Number(slider.value);
-    rankPaths(paths);
-  });
-
-  map.getViewport().appendChild(sliderContainer);
-}
