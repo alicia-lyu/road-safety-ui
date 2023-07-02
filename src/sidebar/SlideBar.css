@@ -1,0 +1,15 @@
+
+.slider-container {
+    position: absolute;
+    z-index: 2;
+    bottom: 300px;
+
+}
+
+.slider {
+    width: 200px;
+}
+
+.slider-container label {
+    margin-right: 5px;
+}

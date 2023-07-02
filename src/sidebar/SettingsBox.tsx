@@ -23,6 +23,7 @@ export default function SettingsBox() {
                 <div style={{ color: showDistanceInMiles ? '#5b616a' : 'gray' }}>
                     {tr('distance_unit', [tr(showDistanceInMiles ? 'mi' : 'km')])}
                 </div>
+                {/* Add your slider here */}
             </div>
             <div className={styles.infoLine}>
                 <a href="https://www.graphhopper.com/maps-route-planner/">Info</a>

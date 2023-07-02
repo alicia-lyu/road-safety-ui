@@ -1,32 +1,29 @@
 import { Feature, Map } from 'ol'
 import { Path } from '@/api/graphhopper'
 import { FeatureCollection } from 'geojson'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import { GeoJSON } from 'ol/format'
 import { Stroke, Style } from 'ol/style'
 import { fromLonLat } from 'ol/proj'
 import Text from 'ol/style/Text.js'
-import Overlay from 'ol/Overlay'
 
 
 const safetyPathsLayerKey = 'safetyPathsLayer'
 const selectedSafetyPathLayerKey = 'selectedSafetyPathLayer'
-let rankList : number[] = []
-let ratio = 0.5
 
 export default function useSafetyPathsLayer(map: Map, paths: Path[], selectedPath: Path) {
+  const [rankList, setRankList] = useState<number[]>([]);
   useEffect(() => {
     removeCurrentSafetyPathLayers(map)
-    rankList = rankPaths(paths)
+    setRankList(rankPaths(paths))
     addUnselectedSafetyPathsLayer(map, paths.filter(p => p !== selectedPath))
-    addSelectedSafetyPathsLayer(map, selectedPath)
+    addSelectedSafetyPathsLayer(map, selectedPath, rankList)
     return () => {
       removeCurrentSafetyPathLayers(map)
     }
   }, [map, paths, selectedPath])
-  createSlider(map, paths)
 }
 
 function rankPaths(paths: Path[]) {
@@ -39,7 +36,7 @@ function rankPaths(paths: Path[]) {
     let averageNum = feature[0].getProperties().averageNumber
     let distance = path.distance
     if (averageNum !== undefined) {
-      let rank = distance*0.5 + averageNum*0.5
+      let rank = distance * 0.5 + averageNum * 0.5
       if (rank >= bestRank) {
         bestPath = path;
         bestRank = rank;
@@ -86,7 +83,7 @@ function addUnselectedSafetyPathsLayer(map: Map, paths: Path[]) {
   map.addLayer(layer)
 }
 
-function addSelectedSafetyPathsLayer(map: Map, selectedPath: Path) {
+function addSelectedSafetyPathsLayer(map: Map, selectedPath: Path, rankList: number[]) {
   const style = new Style({
     stroke: new Stroke({
       color: '#d70015',
@@ -109,11 +106,11 @@ function addSelectedSafetyPathsLayer(map: Map, selectedPath: Path) {
       features: new GeoJSON().readFeatures(createSelectedPath(selectedPath)),
     }),
     style: (feature) => {
-      let numSelectedPath = selectedPath.distance*0.5+feature.get('averageNumber')*0.5
+      let numSelectedPath = selectedPath.distance * 0.5 + feature.get('averageNumber') * 0.5
       let rank = 0
-      rankList.forEach((num, index)=>{
-        if(num==numSelectedPath){
-          rank = index+1
+      rankList.forEach((num, index) => {
+        if (num == numSelectedPath) {
+          rank = index + 1
         }
       })
       const segmentNumber = feature.get('segmentNumber')
@@ -125,7 +122,7 @@ function addSelectedSafetyPathsLayer(map: Map, selectedPath: Path) {
     opacity: 1,
   })
 
- 
+
   selectedLayer.set(safetyPathsLayerKey, true);
   selectedLayer.setZIndex(1.2);
   map.addLayer(selectedLayer);
@@ -190,7 +187,7 @@ function createSelectedPath(path: Path) {
 
   // Update averageNumber property in each feature
   featureCollection.features.forEach((feature) => {
-    if(feature.properties){
+    if (feature.properties) {
       feature.properties.averageNumber = averageNumber;
     }
   })
@@ -216,7 +213,7 @@ function createButton(text: string, onClick: () => void): HTMLButtonElement {
   return button;
 }
 
-function createSlider(map:Map, paths:Path[]) {
+function createSlider(map: Map, paths: Path[], rankList: number[]) {
   const sliderContainer = document.createElement('div');
   sliderContainer.className = 'slider-container';
 
@@ -232,14 +229,14 @@ function createSlider(map:Map, paths:Path[]) {
   label.innerHTML = 'Slider';
 
   const selectButton = createButton('Select the top safe path', () => {
-    
-    paths.forEach(path=>{
+
+    paths.forEach(path => {
       let feature = new GeoJSON().readFeatures(createSelectedPath(path))
       let averageNum = feature[0].getProperties().averageNumber
       let distance = path.distance
-      let index = rankList.findIndex((num) => num === 0.5*averageNum+0.5*distance);
-      if(index==0){
-        addSelectedSafetyPathsLayer(map, path);
+      let index = rankList.findIndex((num) => num === 0.5 * averageNum + 0.5 * distance);
+      if (index == 0) {
+        addSelectedSafetyPathsLayer(map, path, rankList);
       }
     })
   });
@@ -249,7 +246,7 @@ function createSlider(map:Map, paths:Path[]) {
   sliderContainer.appendChild(selectButton);
 
   slider.addEventListener('input', (event) => {
-    ratio = Number(slider.value);
+    let ratio = Number(slider.value);
     rankPaths(paths);
   });
 
