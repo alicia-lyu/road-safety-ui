@@ -110,7 +110,7 @@ export class ApiImpl implements Api {
         const completeRequest = ApiImpl.createRequest(args);
 
         // fetch with multiple profiles
-        const response = await fetch("https://www.graphhopper.com/api/xxx", {
+        const response = await fetch(this.getRoutingURLWithKey('route').toString(), {
             method: 'POST',
             mode: 'cors',
             body: JSON.stringify(completeRequest),
@@ -155,6 +155,7 @@ export class ApiImpl implements Api {
         const routeNumber = this.routeCounter++
         this.route(args)
             .then(result => {
+                console.log("Sent a new subrequest with custom model: " + JSON.stringify(args.customModel))
                 if (routeNumber > this.lastRouteNumber) {
                     this.lastRouteNumber = routeNumber
                     Dispatcher.dispatch(new RouteRequestSuccess(args, zoomOnSuccess, result))
@@ -356,3 +357,4 @@ export class ApiImpl implements Api {
         return profile.includes('truck')
     }
 }
+
