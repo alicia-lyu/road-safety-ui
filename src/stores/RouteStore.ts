@@ -86,7 +86,7 @@ export default class RouteStore extends Store<RouteStoreState> {
         const routingResult: RoutingResult = action.result
         if (RouteStore.containsPaths(action.result.paths)) {
             // restore snapped_waypoints.coordinates by deleting added middle points
-            console.log("Routing result: ", JSON.stringify(routingResult.paths.map(path => path.snapped_waypoints.coordinates)))
+            // console.log("Routing result: ", JSON.stringify(routingResult.paths.map(path => path.snapped_waypoints.coordinates)))
             if (this.queryStore.state.safeRoutingEnabled){
                 const restoredPaths: Path[] = []
                 for (const path of routingResult.paths) {
@@ -104,7 +104,10 @@ export default class RouteStore extends Store<RouteStoreState> {
                 return {
                     routingResult: {
                         ...routingResult,
-                        paths: restoredPaths,
+                        paths: [
+                            ...state.routingResult.paths,
+                            ...restoredPaths
+                        ]
                     },
                     selectedPath: restoredPaths[0],
                 }

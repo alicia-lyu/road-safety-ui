@@ -290,7 +290,6 @@ export default class QueryStore extends Store<QueryStoreState> {
             const newState: QueryStoreState = {
                 ...state,
                 safeRoutingEnabled: !state.safeRoutingEnabled,
-                customModelEnabled: state.safeRoutingEnabled
             }
             return this.routeIfReady(newState, true)
         }
@@ -365,8 +364,7 @@ export default class QueryStore extends Store<QueryStoreState> {
                         // We first send a fast request without alternatives with default model...
                         QueryStore.buildRouteRequest({
                             ...state,
-                            maxAlternativeRoutes: 1,
-                            customModelEnabled: false
+                            maxAlternativeRoutes: 1
                         }),
                     ]
                     // ... and then a second, slower request including alternatives if they are enabled.
@@ -388,11 +386,14 @@ export default class QueryStore extends Store<QueryStoreState> {
                     }))
                 ]
 
-                // then a second, slower request including alternatives (max. 4 in total)
+                // then 3 more slower request including alternatives (max. 4 in total)
                 // with different middle points
-                requests.push(QueryStore.buildRouteRequest(
-                    QueryStore.generateMiddlePoints(state)
-                ))
+                for (let i = 0; i < 3; i++) {
+                    requests.push(QueryStore.buildRouteRequest(QueryStore.generateMiddlePoints({
+                        ...state,
+                        maxAlternativeRoutes: 1,
+                    })))
+                }
 
             }
 

@@ -160,9 +160,9 @@ export class ApiImpl implements Api {
                 if (routeNumber > this.lastRouteNumber) {
                     this.lastRouteNumber = routeNumber
                     Dispatcher.dispatch(new RouteRequestSuccess(args, zoomOnSuccess, result))
-                } else {
-                    const tmp = JSON.stringify(args) + ' ' + routeNumber + ' <= ' + this.lastRouteNumber
-                    console.log('Ignore response of earlier started route ' + tmp)
+                // } else {
+                //     const tmp = JSON.stringify(args) + ' ' + routeNumber + ' <= ' + this.lastRouteNumber
+                //     console.log('Ignore response of earlier started route ' + tmp)
                 }
             })
             .catch(error => {

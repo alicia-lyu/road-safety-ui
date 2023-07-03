@@ -22,6 +22,7 @@ const accessNetworkLayerKey = 'accessNetworkLayer'
 
 export default function usePathsLayer(map: Map, paths: Path[], selectedPath: Path, queryPoints: QueryPoint[]) {
     useEffect(() => {
+        // console.log("Paths: ", paths.length)
         removeCurrentPathLayers(map)
         addUnselectedPathsLayer(
             map,
@@ -123,7 +124,7 @@ function addAccessNetworkLayer(map: Map, selectedPath: Path, queryPoints: QueryP
     // console.log("query points:", JSON.stringify(queryPoints));
     // console.log("snapped waypoints:", JSON.stringify(selectedPath.snapped_waypoints.coordinates))
     for (let i = 0; i < selectedPath.snapped_waypoints.coordinates.length; i++) {
-        console.log(i)
+        // console.log(i)
         const start = fromLonLat([queryPoints[i].coordinate.lng, queryPoints[i].coordinate.lat])
         const end = fromLonLat(selectedPath.snapped_waypoints.coordinates[i])
         layer.getSource()?.addFeature(new Feature(createBezierLineString(start, end)))
