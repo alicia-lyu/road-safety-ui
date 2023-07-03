@@ -127,6 +127,7 @@ export class ApiImpl implements Api {
             // transform encoded points into decoded
             return {
                 ...rawResult,
+                // results contain manually added middlePoints (in snapped_points)
                 paths: ApiImpl.decodeResult(rawResult, completeRequest.elevation),
             }
         } else if (response.status === 500) {
@@ -155,7 +156,7 @@ export class ApiImpl implements Api {
         const routeNumber = this.routeCounter++
         this.route(args)
             .then(result => {
-                console.log("Sent a new subrequest with custom model: " + JSON.stringify(args.customModel))
+                console.log("Sent a new subrequest with points: " + JSON.stringify(args.points))
                 if (routeNumber > this.lastRouteNumber) {
                     this.lastRouteNumber = routeNumber
                     Dispatcher.dispatch(new RouteRequestSuccess(args, zoomOnSuccess, result))

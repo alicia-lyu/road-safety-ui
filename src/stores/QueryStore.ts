@@ -303,11 +303,27 @@ export default class QueryStore extends Store<QueryStoreState> {
     ): QueryStoreState {
         const newState = action instanceof RouteRequestSuccess ? RequestState.SUCCESS : RequestState.FAILED
         const newSubrequests = QueryStore.replaceSubRequest(state.currentRequest.subRequests, action.request, newState)
-
+        // action.result doesn't play a role here, don't need to worry about it
+        // restore the points by removing the added middle points with safeRoutingMode enabled
+        const restoredSubrequests: SubRequest[] = []
+        if (state.safeRoutingEnabled) {
+            for (const subrequest of newSubrequests) {
+                const restoredPoints = subrequest.args.points.filter((point, i) => i % 2 !== 1)
+                restoredSubrequests.push({
+                    ...subrequest,
+                    args: {
+                        ...subrequest.args,
+                        points: restoredPoints,
+                    },
+                })
+            }
+        } else {
+            restoredSubrequests.push(...newSubrequests)
+        }
         return {
             ...state,
             currentRequest: {
-                subRequests: newSubrequests,
+                subRequests: restoredSubrequests,
             },
         }
     }
@@ -363,35 +379,21 @@ export default class QueryStore extends Store<QueryStoreState> {
                 }
             } else {
                 // with safe routing mode
-                // state.customModelEnabled should be set to false
                 requests = [
                     // We first send a fast request without alternatives 
-                    // with default model (distance_influence = 15)
                     // which returns a result of fastest
-                    QueryStore.buildRouteRequest({
+                    QueryStore.buildRouteRequest(QueryStore.generateMiddlePoints({
                         ...state,
                         maxAlternativeRoutes: 1,
-                    }),
+                    }))
                 ]
 
                 // then a second, slower request including alternatives (max. 4 in total)
-                // with default model (distance_influence = 15)
-                // but without CM in this stage because requests with CM are easily timed out
-                requests.push(QueryStore.buildRouteRequest({
-                    ...state,
-                    maxAlternativeRoutes: 2
-                }))
+                // with different middle points
+                requests.push(QueryStore.buildRouteRequest(
+                    QueryStore.generateMiddlePoints(state)
+                ))
 
-                for (let key of Object.keys(customModelExamples)) {
-                    const customModel = customModelExamples[key]
-                    requests.push(QueryStore.buildRouteRequest({
-                        ...state,
-                        maxAlternativeRoutes: state.maxAlternativeRoutes+1,
-                        customModelEnabled: true,
-                        customModelStr: customModel2prettyString(customModel)
-                    }))
-                }
-                // TODO: Edit maxAlternativeRoutes
             }
 
             return {
@@ -512,6 +514,57 @@ export default class QueryStore extends Store<QueryStoreState> {
             type: type,
         }
     }
+
+    /**
+     * Generate middle points between each pair of existing points
+     * @param state must have 2 or more valid points (not empty)
+     * @returns a new state with the generated points added
+     */
+    private static generateMiddlePoints(state: QueryStoreState): QueryStoreState {
+        const queryPoints: QueryPoint[] = state.queryPoints
+        const newQueryPoints: QueryPoint[] = []
+        for (let i = 0; i < queryPoints.length - 1; i++) {
+            const point1 = queryPoints[i]
+            const point2 = queryPoints[i + 1]
+            const middlePoint = {
+                isInitialized: true,
+                queryText: 'Middile Point ' + i + 1,
+                coordinate: QueryStore.calcRandomMiddlePoint(point1.coordinate, point2.coordinate),
+                id: state.nextQueryPointId,
+                color: QueryStore.getMarkerColor(QueryPointType.Via),
+                type: QueryPointType.Via,
+            }
+            newQueryPoints.push(point1)
+            newQueryPoints.push(middlePoint)
+            // console.log('Generated middle point ' + JSON.stringify(middlePoint.coordinate) + ' between ' + point1.queryText + ' and ' + point2.queryText)
+        }
+        newQueryPoints.push(queryPoints[queryPoints.length - 1])
+        return {
+            ...state,
+            queryPoints: newQueryPoints,
+            nextQueryPointId: state.nextQueryPointId + 1,
+        }
+    }
+
+    /**
+     * Calculate a random point between @param point1 and @param point2
+     * @param point1 must be a valid point
+     * @param point2 must be a valid point
+     * @returns a random point whose longitude and latitude forms a normal distribution, 
+     * whose +- 2 stdev falls between @param point1 and @param point2
+     */
+    private static calcRandomMiddlePoint(point1: Coordinate, point2: Coordinate): Coordinate {
+        const latMean = (point1.lat + point2.lat) / 2
+        const latStdev = Math.abs(point1.lat - point2.lat) / 4
+        const lngMean = (point1.lng + point2.lng) / 2
+        const lngStdev = Math.abs(point1.lng - point2.lng) / 4
+        const gaussianRandomLat = calcGaussianRandom(latMean, latStdev)
+        const gaussianRandomLng = calcGaussianRandom(lngMean, lngStdev)
+        return {
+            lat: gaussianRandomLat,
+            lng: gaussianRandomLng,
+        }
+    }
 }
 
 function replace<T>(array: T[], compare: { (element: T): boolean }, provider: { (element: T): T }) {
@@ -532,4 +585,14 @@ function getMaxDistance(queryPoints: QueryPoint[]): number {
         max = Math.max(dist, max)
     }
     return max
+}
+
+// Standard Normal variate using Box-Muller transform.
+// See https://stackoverflow.com/a/36481059
+function calcGaussianRandom(mean = 0, stdev = 1) {
+    const u = 1 - Math.random(); // Converting [0,1) to (0,1]
+    const v = Math.random();
+    const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    // Transform to the desired mean and standard deviation:
+    return z * stdev + mean;
 }

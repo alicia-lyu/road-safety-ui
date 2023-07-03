@@ -83,10 +83,36 @@ export default class RouteStore extends Store<RouteStoreState> {
     }
 
     private reduceRouteReceived(state: RouteStoreState, action: RouteRequestSuccess) {
+        const routingResult: RoutingResult = action.result
         if (RouteStore.containsPaths(action.result.paths)) {
-            return {
-                routingResult: action.result,
-                selectedPath: action.result.paths[0],
+            // restore snapped_waypoints.coordinates by deleting added middle points
+            console.log("Routing result: ", JSON.stringify(routingResult.paths.map(path => path.snapped_waypoints.coordinates)))
+            if (this.queryStore.state.safeRoutingEnabled){
+                const restoredPaths: Path[] = []
+                for (const path of routingResult.paths) {
+                    const restoredSnappedWaypointsCoordinates = path.snapped_waypoints.coordinates.filter((coordinate, i) => i % 2 !== 1)
+                    const restoredPath = {
+                        ...path,
+                        snapped_waypoints: {
+                            ...path.snapped_waypoints,
+                            coordinates: restoredSnappedWaypointsCoordinates,
+                        }
+                    }
+                    restoredPaths.push(restoredPath)
+                }
+                console.log("Restored paths: ", JSON.stringify(restoredPaths.map(path => path.snapped_waypoints.coordinates)))
+                return {
+                    routingResult: {
+                        ...routingResult,
+                        paths: restoredPaths,
+                    },
+                    selectedPath: restoredPaths[0],
+                }
+            } else {
+                return {
+                    routingResult: routingResult,
+                    selectedPath: routingResult.paths[0],
+                }
             }
         }
         return RouteStore.getInitialState()
