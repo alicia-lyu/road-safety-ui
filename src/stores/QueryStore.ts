@@ -12,7 +12,8 @@ import {
     RemovePoint,
     RouteRequestFailed,
     RouteRequestSuccess,
-    SafeModeRequestToSend,
+    SafeModeRequest,
+    SafeModeRequestsToSend,
     SetCustomModel,
     SetCustomModelEnabled,
     SetPoint,
@@ -363,12 +364,16 @@ export default class QueryStore extends Store<QueryStoreState> {
                 // with safe routing mode
                 // We first send a fast request without alternatives 
                 // which returns a result of fastest
+                const safeModeRequests: SafeModeRequest[] = []
                 const firstFastRequest = QueryStore.buildRouteRequest({
                     ...state,
                     maxAlternativeRoutes: 1
                 })
                 requests = [firstFastRequest]
-                Dispatcher.dispatch(new SafeModeRequestToSend(firstFastRequest, false))
+                safeModeRequests.push({
+                    request: firstFastRequest,
+                    middlePointsAdded: false
+                })
 
                 // ... and then a second, slower request including alternatives if they are enabled.
                 if (
@@ -378,7 +383,10 @@ export default class QueryStore extends Store<QueryStoreState> {
                 ) {
                     const secondRequest = QueryStore.buildRouteRequest(state)
                     requests.push(secondRequest)
-                    Dispatcher.dispatch(new SafeModeRequestToSend(secondRequest,false))
+                    safeModeRequests.push({
+                        request: secondRequest,
+                        middlePointsAdded: false
+                    })
                 }
                     
 
@@ -390,10 +398,14 @@ export default class QueryStore extends Store<QueryStoreState> {
                         maxAlternativeRoutes: 1,
                     }))
                     requests.push(newRequest)
-                    Dispatcher.dispatch(new SafeModeRequestToSend(newRequest, true))
+                    safeModeRequests.push({
+                        request: newRequest,
+                        middlePointsAdded: true
+                    })
                 }
+                Dispatcher.dispatch(new SafeModeRequestsToSend(safeModeRequests))
             }
-
+            
             return {
                 ...state,
                 currentRequest: { subRequests: this.send(requests, zoom) },

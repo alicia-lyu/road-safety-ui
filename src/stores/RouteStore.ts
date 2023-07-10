@@ -1,9 +1,8 @@
 import Store from '@/stores/Store'
 import Dispatcher, { Action } from '@/stores/Dispatcher'
-import { ClearPoints, ClearRoute, ReadyToReduceRoute, RemovePoint, RouteRequestSuccess, SafeModeRequestToSend, SetPoint, SetSelectedPath } from '@/actions/Actions'
-import QueryStore, { RequestState } from '@/stores/QueryStore'
+import { ClearPoints, ClearRoute, ReadyToReduceRoute, RemovePoint, RouteRequestSuccess, SafeModeRequest, SafeModeRequestsToSend, SetPoint, SetSelectedPath } from '@/actions/Actions'
+import QueryStore from '@/stores/QueryStore'
 import { Path, RoutingArgs, RoutingResult } from '@/api/graphhopper'
-import { set } from 'ol/transform'
 
 export interface RouteStoreState {
     routingResult: RoutingResult
@@ -11,10 +10,7 @@ export interface RouteStoreState {
 }
 
 export default class RouteStore extends Store<RouteStoreState> {
-    private safeModeRequestsToBeSent: {
-        routingArgs: RoutingArgs,
-        middlePointAdded: boolean
-    }[]
+    private safeModeRequestsToBeSent: SafeModeRequest[]
 
     private static getEmptyPath(): Path {
         return {
@@ -74,7 +70,7 @@ export default class RouteStore extends Store<RouteStoreState> {
             console.log("State cleared 1")
             this.safeModeRequestsToBeSent = []
             return RouteStore.getInitialState()
-        } else if (action instanceof SafeModeRequestToSend) {
+        } else if (action instanceof SafeModeRequestsToSend) {
             // console.log("SafeModeRequestToSend")
             return this.prepareForSafeModeRequest(state, action)
         } else if (action instanceof ReadyToReduceRoute) {
@@ -100,7 +96,7 @@ export default class RouteStore extends Store<RouteStoreState> {
     private reduceRouteReceived(state: RouteStoreState, action: RouteRequestSuccess): RouteStoreState {
         const routingResult: RoutingResult = action.result;
         const routingArgs: RoutingArgs = action.request;
-        console.log("Route received: ", routingArgs)
+        console.log("Route received:", routingResult.paths.length, "paths", "with", routingArgs.points.length, "points", "and maxAlternativeRoutes", routingArgs.maxAlternativeRoutes)
         if (this.isStaleRequest(action.request)) {
             console.log("Stale request")
             return state
@@ -108,7 +104,7 @@ export default class RouteStore extends Store<RouteStoreState> {
         if (RouteStore.containsPaths(action.result.paths)) {
             if (this.queryStore.state.safeRoutingEnabled) {
                 this.waitForSafeModeRequest(routingArgs).then(() => {
-                    console.log("Safe mode request received: ", routingArgs)
+                    console.log("Corresponding safe mode request received: ", JSON.stringify(routingArgs.points))
                     // console.log(this.safeModeRequestsToBeSent)
                     Dispatcher.dispatch(new ReadyToReduceRoute(routingArgs, routingResult))
                 })
@@ -169,12 +165,9 @@ export default class RouteStore extends Store<RouteStoreState> {
      * @param action SafeModeRequestToSend gives us the routing args of the request that is to be sent and whether middlePoints are to be deleted
      * @returns the new state with paths reduced from the temp store
      */
-    private prepareForSafeModeRequest(state: RouteStoreState, action: SafeModeRequestToSend): RouteStoreState {
+    private prepareForSafeModeRequest(state: RouteStoreState, action: SafeModeRequestsToSend): RouteStoreState {
         // console.log("Safe mode request to be sent: ", action.request)
-        this.safeModeRequestsToBeSent.push({
-            routingArgs: action.request,
-            middlePointAdded: action.middlePointAdded,
-        })
+        this.safeModeRequestsToBeSent = action.requests
         return state
     }
 
@@ -182,7 +175,7 @@ export default class RouteStore extends Store<RouteStoreState> {
         return new Promise((resolve, reject) => {
             const interval = setInterval(() => {
                 for (const safeModeRequestToBeSent of this.safeModeRequestsToBeSent) {
-                    if (JSONCompare(safeModeRequestToBeSent.routingArgs, safeModeRequest)) {
+                    if (JSONCompare(safeModeRequestToBeSent.request, safeModeRequest)) {
                         clearInterval(interval)
                         resolve()
                     }
@@ -193,9 +186,9 @@ export default class RouteStore extends Store<RouteStoreState> {
     }
 
     private getIfMiddlePointAdded(routingArgs: RoutingArgs): boolean {
-        const safeModeRequest = this.safeModeRequestsToBeSent.find(safeModeRequest => safeModeRequest.routingArgs === routingArgs)
+        const safeModeRequest = this.safeModeRequestsToBeSent.find(safeModeRequest => safeModeRequest.request === routingArgs)
         if (safeModeRequest) {
-            return safeModeRequest.middlePointAdded
+            return safeModeRequest.middlePointsAdded
         }
         return false
     }
