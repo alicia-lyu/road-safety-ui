@@ -14,8 +14,9 @@ import {
     RoutingResult,
 } from '@/api/graphhopper'
 import { LineString } from 'geojson'
-import { getTranslation, tr } from '@/translation/Translation'
+import { getTranslation, tr, Translation } from '@/translation/Translation'
 import * as config from 'config'
+import { Coordinate } from '@/stores/QueryStore'
 
 interface ApiProfile {
     name: string
@@ -52,8 +53,6 @@ export class ApiImpl implements Api {
     private readonly apiKey: string
     private readonly routingApi: string
     private readonly geocodingApi: string
-    private routeCounter = 0
-    private lastRouteNumber = -1
 
     constructor(routingApi: string, geocodingApi: string, apiKey: string) {
         this.apiKey = apiKey
@@ -153,24 +152,11 @@ export class ApiImpl implements Api {
     }
 
     routeWithDispatch(args: RoutingArgs, zoomOnSuccess: boolean) {
-        const routeNumber = this.routeCounter++
         this.route(args)
-            .then(result => {
-                console.log("Sent a new subrequest with points: " + JSON.stringify(args.points))
-                if (routeNumber > this.lastRouteNumber) {
-                    this.lastRouteNumber = routeNumber
-                    Dispatcher.dispatch(new RouteRequestSuccess(args, zoomOnSuccess, result))
-                }
-            })
+            .then(result => Dispatcher.dispatch(new RouteRequestSuccess(args, zoomOnSuccess, result)))
             .catch(error => {
-                if (routeNumber > this.lastRouteNumber) {
-                    console.warn('error when performing /route request ' + routeNumber + ': ', error)
-                    this.lastRouteNumber = routeNumber
-                    Dispatcher.dispatch(new RouteRequestFailed(args, error.message))
-                } else {
-                    const tmp = JSON.stringify(args) + ' ' + routeNumber + ' <= ' + this.lastRouteNumber
-                    console.log('Ignore error ' + error.message + ' of earlier started route ' + tmp)
-                }
+                console.warn('error when performing /route request: ', error)
+                return Dispatcher.dispatch(new RouteRequestFailed(args, error.message))
             })
     }
 

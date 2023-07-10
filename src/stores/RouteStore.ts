@@ -1,7 +1,7 @@
 import Store from '@/stores/Store'
 import Dispatcher, { Action } from '@/stores/Dispatcher'
 import { ClearPoints, ClearRoute, ReadyToReduceRoute, RemovePoint, RouteRequestSuccess, SafeModeRequestToSend, SetPoint, SetSelectedPath } from '@/actions/Actions'
-import QueryStore from '@/stores/QueryStore'
+import QueryStore, { RequestState } from '@/stores/QueryStore'
 import { Path, RoutingArgs, RoutingResult } from '@/api/graphhopper'
 import { set } from 'ol/transform'
 
@@ -101,6 +101,7 @@ export default class RouteStore extends Store<RouteStoreState> {
         const routingResult: RoutingResult = action.result;
         const routingArgs: RoutingArgs = action.request;
         console.log("Route received: ", routingArgs)
+        if (this.isStaleRequest(action.request)) return state
         if (RouteStore.containsPaths(action.result.paths)) {
             if (this.queryStore.state.safeRoutingEnabled) {
                 this.waitForSafeModeRequest(routingArgs).then(() => {
@@ -194,6 +195,24 @@ export default class RouteStore extends Store<RouteStoreState> {
             return safeModeRequest.middlePointAdded
         }
         return false
+    }
+
+    private isStaleRequest(request: RoutingArgs) {
+        // this could be probably written less tedious...
+        const subRequests = this.queryStore.state.currentRequest.subRequests
+        let requestIndex = -1
+        let mostRecentAndFinishedIndex = -1
+        for (let i = 0; i < subRequests.length; i++) {
+            const element = subRequests[i]
+            if (element.args === request) {
+                requestIndex = i
+            }
+            if (element.state === RequestState.SUCCESS) {
+                mostRecentAndFinishedIndex = i
+            }
+        }
+
+        return requestIndex < 0 && requestIndex < mostRecentAndFinishedIndex
     }
 
     private static containsPaths(paths: Path[]) {
