@@ -303,27 +303,10 @@ export default class QueryStore extends Store<QueryStoreState> {
     ): QueryStoreState {
         const newState = action instanceof RouteRequestSuccess ? RequestState.SUCCESS : RequestState.FAILED
         const newSubrequests = QueryStore.replaceSubRequest(state.currentRequest.subRequests, action.request, newState)
-        // action.result doesn't play a role here, don't need to worry about it
-        // restore the points by removing the added middle points with safeRoutingMode enabled
-        const restoredSubrequests: SubRequest[] = []
-        if (state.safeRoutingEnabled) {
-            for (const subrequest of newSubrequests) {
-                const restoredPoints = subrequest.args.points.filter((point, i) => i % 2 !== 1)
-                restoredSubrequests.push({
-                    ...subrequest,
-                    args: {
-                        ...subrequest.args,
-                        points: restoredPoints,
-                    },
-                })
-            }
-        } else {
-            restoredSubrequests.push(...newSubrequests)
-        }
         return {
             ...state,
             currentRequest: {
-                subRequests: restoredSubrequests,
+                subRequests: newSubrequests,
             },
         }
     }
@@ -430,6 +413,8 @@ export default class QueryStore extends Store<QueryStoreState> {
         subRequests.forEach((subRequest, i) => {
             this.api.routeWithDispatch(subRequest.args, i == 0 ? zoom : false)
         })
+
+        // console.log('subRequests to send', subRequests.map(subRequest => subRequest.args.points))
         return subRequests
     }
 

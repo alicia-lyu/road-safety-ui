@@ -101,12 +101,15 @@ export default class RouteStore extends Store<RouteStoreState> {
         const routingResult: RoutingResult = action.result;
         const routingArgs: RoutingArgs = action.request;
         console.log("Route received: ", routingArgs)
-        if (this.isStaleRequest(action.request)) return state
+        if (this.isStaleRequest(action.request)) {
+            console.log("Stale request")
+            return state
+        }
         if (RouteStore.containsPaths(action.result.paths)) {
             if (this.queryStore.state.safeRoutingEnabled) {
                 this.waitForSafeModeRequest(routingArgs).then(() => {
                     console.log("Safe mode request received: ", routingArgs)
-                    console.log(this.safeModeRequestsToBeSent)
+                    // console.log(this.safeModeRequestsToBeSent)
                     Dispatcher.dispatch(new ReadyToReduceRoute(routingArgs, routingResult))
                 })
                 return state;
@@ -167,7 +170,7 @@ export default class RouteStore extends Store<RouteStoreState> {
      * @returns the new state with paths reduced from the temp store
      */
     private prepareForSafeModeRequest(state: RouteStoreState, action: SafeModeRequestToSend): RouteStoreState {
-        console.log("Safe mode request to be sent: ", action.request)
+        // console.log("Safe mode request to be sent: ", action.request)
         this.safeModeRequestsToBeSent.push({
             routingArgs: action.request,
             middlePointAdded: action.middlePointAdded,
@@ -198,21 +201,14 @@ export default class RouteStore extends Store<RouteStoreState> {
     }
 
     private isStaleRequest(request: RoutingArgs) {
-        // this could be probably written less tedious...
         const subRequests = this.queryStore.state.currentRequest.subRequests
-        let requestIndex = -1
-        let mostRecentAndFinishedIndex = -1
-        for (let i = 0; i < subRequests.length; i++) {
-            const element = subRequests[i]
-            if (element.args === request) {
-                requestIndex = i
-            }
-            if (element.state === RequestState.SUCCESS) {
-                mostRecentAndFinishedIndex = i
+        // console.log("Subrequests: ", subRequests.map(subRequest => subRequest.args.points))
+        for (const subRequest of subRequests) {
+            if (JSONCompare(subRequest.args, request)) {
+                return false
             }
         }
-
-        return requestIndex < 0 && requestIndex < mostRecentAndFinishedIndex
+        return true
     }
 
     private static containsPaths(paths: Path[]) {
