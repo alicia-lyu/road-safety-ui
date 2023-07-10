@@ -75,7 +75,7 @@ export default class RouteStore extends Store<RouteStoreState> {
             this.safeModeRequestsToBeSent = []
             return RouteStore.getInitialState()
         } else if (action instanceof SafeModeRequestToSend) {
-            console.log("SafeModeRequestToSend")
+            // console.log("SafeModeRequestToSend")
             return this.prepareForSafeModeRequest(state, action)
         } else if (action instanceof ReadyToReduceRoute) {
             console.log("ReadyToReduceRoute")
@@ -100,9 +100,12 @@ export default class RouteStore extends Store<RouteStoreState> {
     private reduceRouteReceived(state: RouteStoreState, action: RouteRequestSuccess): RouteStoreState {
         const routingResult: RoutingResult = action.result;
         const routingArgs: RoutingArgs = action.request;
+        console.log("Route received: ", routingArgs)
         if (RouteStore.containsPaths(action.result.paths)) {
             if (this.queryStore.state.safeRoutingEnabled) {
                 this.waitForSafeModeRequest(routingArgs).then(() => {
+                    console.log("Safe mode request received: ", routingArgs)
+                    console.log(this.safeModeRequestsToBeSent)
                     Dispatcher.dispatch(new ReadyToReduceRoute(routingArgs, routingResult))
                 })
                 return state;
@@ -171,7 +174,7 @@ export default class RouteStore extends Store<RouteStoreState> {
         return state
     }
 
-    private waitForSafeModeRequest(safeModeRequest: RoutingArgs): Promise<void> {
+    private async waitForSafeModeRequest(safeModeRequest: RoutingArgs): Promise<void> {
         return new Promise((resolve, reject) => {
             const interval = setInterval(() => {
                 for (const safeModeRequestToBeSent of this.safeModeRequestsToBeSent) {
@@ -180,8 +183,8 @@ export default class RouteStore extends Store<RouteStoreState> {
                         resolve()
                     }
                 }
-                console.log("Waiting for safe mode request: ", safeModeRequest)
-            }, 100)
+                // console.log("Waiting for safe mode request: ", safeModeRequest)
+            }, 200)
         })
     }
 
@@ -201,5 +204,3 @@ export default class RouteStore extends Store<RouteStoreState> {
 function JSONCompare(json1: any, json2: any): boolean {
     return JSON.stringify(json1) === JSON.stringify(json2)
 }
-
-
