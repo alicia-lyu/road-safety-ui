@@ -12,6 +12,7 @@ import {
     RemovePoint,
     RouteRequestFailed,
     RouteRequestSuccess,
+    SafeModeRequestToSend,
     SetCustomModel,
     SetCustomModelEnabled,
     SetPoint,
@@ -377,24 +378,37 @@ export default class QueryStore extends Store<QueryStoreState> {
                 }
             } else {
                 // with safe routing mode
-                requests = [
-                    // We first send a fast request without alternatives 
-                    // which returns a result of fastest
-                    QueryStore.buildRouteRequest(QueryStore.generateMiddlePoints({
-                        ...state,
-                        maxAlternativeRoutes: 1,
-                    }))
-                ]
+                // We first send a fast request without alternatives 
+                // which returns a result of fastest
+                const firstFastRequest = QueryStore.buildRouteRequest({
+                    ...state,
+                    maxAlternativeRoutes: 1
+                })
+                requests = [firstFastRequest]
+                Dispatcher.dispatch(new SafeModeRequestToSend(firstFastRequest, false))
+
+                // ... and then a second, slower request including alternatives if they are enabled.
+                if (
+                    state.queryPoints.length === 2 &&
+                    state.maxAlternativeRoutes > 1 &&
+                    (ApiImpl.isMotorVehicle(state.routingProfile.name) || maxDistance < 500_000)
+                ) {
+                    const secondRequest = QueryStore.buildRouteRequest(state)
+                    requests.push(secondRequest)
+                    Dispatcher.dispatch(new SafeModeRequestToSend(secondRequest,false))
+                }
+                    
 
                 // then 3 more slower request including alternatives (max. 4 in total)
                 // with different middle points
                 for (let i = 0; i < 3; i++) {
-                    requests.push(QueryStore.buildRouteRequest(QueryStore.generateMiddlePoints({
+                    const newRequest = QueryStore.buildRouteRequest(QueryStore.generateMiddlePoints({
                         ...state,
                         maxAlternativeRoutes: 1,
-                    })))
+                    }))
+                    requests.push(newRequest)
+                    Dispatcher.dispatch(new SafeModeRequestToSend(newRequest, true))
                 }
-
             }
 
             return {

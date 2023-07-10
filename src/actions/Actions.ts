@@ -249,3 +249,23 @@ export class DrawAreas implements Action {
 }
 
 export class ToggleSafeRoutingEnabled implements Action {}
+
+export class SafeModeRequestToSend implements Action {
+    readonly request: RoutingArgs
+    readonly middlePointAdded: boolean
+
+    constructor(request: RoutingArgs, middlePointAdded: boolean) {
+        this.request = request
+        this.middlePointAdded = middlePointAdded
+    }
+}
+
+export class ReadyToReduceRoute implements Action {
+    readonly result: RoutingResult
+    readonly request: RoutingArgs
+
+    constructor(request: RoutingArgs, result: RoutingResult) {
+        this.result = result
+        this.request = request
+    }
+}
