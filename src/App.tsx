@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, ChangeEvent} from 'react'
 import PathDetails from '@/pathDetails/PathDetails'
 import styles from './App.module.css'
 import {
@@ -44,13 +44,13 @@ import useAreasLayer from '@/layers/UseAreasLayer'
 import useExternalMVTLayer from '@/layers/UseExternalMVTLayer'
 import useSafetyPathsLayer from './layers/UseSafetyPathsLayer'
 import LocationButton from '@/map/LocationButton'
+import SafetyPathSelect from '@/sidebar/SelectComponent'
+
 
 export const POPUP_CONTAINER_ID = 'popup-container'
 export const SIDEBAR_CONTENT_ID = 'sidebar-content'
 
 export default function App() {
-    // Component
-    // state
     const [settings, setSettings] = useState(getSettingsStore().state)
     const [query, setQuery] = useState(getQueryStore().state)
     const [info, setInfo] = useState(getApiInfoStore().state)
@@ -112,7 +112,7 @@ export default function App() {
     useQueryPointsLayer(map, query.queryPoints)
     usePathDetailsLayer(map, pathDetails)
 
-    useSafetyPathsLayer(map, route.routingResult.paths, route.selectedPath);
+    //useSafetyPathsLayer(map, route.routingResult.paths, route.selectedPath);
 
     const isSmallScreen = useMediaQuery({ query: '(max-width: 44rem)' })
     return (
@@ -159,6 +159,13 @@ interface LayoutProps {
 function LargeScreenLayout({ query, route, map, error, mapOptions, encodedValues, drawAreas }: LayoutProps) {
     const [showSidebar, setShowSidebar] = useState(true)
     const [showCustomModelBox, setShowCustomModelBox] = useState(false)
+    const [selectedMode, setSelectedMode] = useState<string>('roadCondition')
+    const handleModeChange = (event: ChangeEvent<HTMLSelectElement>) => {
+        setSelectedMode(event.target.value)
+        // Do whatever you need to do with the selected mode (e.g., update layers on the map)
+        console.log(event.target.value)
+      };
+    useSafetyPathsLayer(map, route.routingResult.paths, route.selectedPath, selectedMode);
     return (
         <>
             {showSidebar ? (
@@ -203,6 +210,18 @@ function LargeScreenLayout({ query, route, map, error, mapOptions, encodedValues
                     </PlainButton>
                 </div>
             )}
+
+        <div>
+        <SafetyPathSelect
+          label="User Mode Select"
+          value={selectedMode}
+          options={[
+            { value: 'roadCondition', label: 'Road condition' },
+            { value: 'trafficCongestion', label: 'Traffic congestion' },
+          ]}
+          onChange={handleModeChange}
+        />
+        </div>
             <div className={styles.popupContainer} id={POPUP_CONTAINER_ID} />
             <div className={styles.onMapRightSide}>
                 <MapOptions {...mapOptions} />
