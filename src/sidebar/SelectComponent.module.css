@@ -1,0 +1,22 @@
+.safetyPathSelectContainer {
+    z-index: 100;
+    position: relative;
+    margin-bottom: 16px;
+    top: -300px;
+    left: 10px;
+  }
+  
+  .label {
+    font-size: 14px;
+    font-weight: bold;
+    margin-right: 8px;
+  }
+  
+  .select {
+    padding: 8px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #fff;
+    cursor: pointer;
+  }
