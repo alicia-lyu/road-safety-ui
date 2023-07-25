@@ -1,254 +1,198 @@
-import { Feature, Map } from 'ol'
-import { Path } from '@/api/graphhopper'
-import { FeatureCollection } from 'geojson'
-import { useEffect, useState } from 'react'
-import VectorLayer from 'ol/layer/Vector'
-import VectorSource from 'ol/source/Vector'
-import { GeoJSON } from 'ol/format'
-import { Stroke, Style } from 'ol/style'
-import { fromLonLat } from 'ol/proj'
-import Text from 'ol/style/Text.js'
+import { Map } from 'ol';
+import { Path } from '@/api/graphhopper';
+import { FeatureCollection } from 'geojson';
+import { useEffect } from 'react';
+import VectorLayer from 'ol/layer/Vector';
+import VectorSource from 'ol/source/Vector';
+import { GeoJSON } from 'ol/format';
+import { Stroke, Style } from 'ol/style';
+import { fromLonLat } from 'ol/proj';
+import Feature, { FeatureLike } from 'ol/Feature';
+import { Geometry, LineString } from 'ol/geom';
 
-
-const safetyPathsLayerKey = 'safetyPathsLayer'
-const selectedSafetyPathLayerKey = 'selectedSafetyPathLayer'
-
-export default function useSafetyPathsLayer(map: Map, paths: Path[], selectedPath: Path) {
-  const [rankList, setRankList] = useState<number[]>([]);
+const safetyPathsLayerKey = 'safetyPathsLayer';
+const selectedSafetyPathLayerKey = 'selectedSafetyPathLayer';
+const safetyScoreToColorsRoadCondition = [
+  '#f63428',
+  '#ff8c00',
+  '#ffcc00',
+  '#02d46a',
+];
+const safetyScoreToColorsTrafficCongestion = [
+  '#1e90ff', 
+  '#800080', 
+  '#ff1493', 
+  '#00ced1', 
+];
+let selectedModeKey : string
+// Copied from UsePathsLayer.tsx
+// Code related to accessNetworkLayer deleted, might have backlash
+export default function useSafetyPathsLayer(map: Map, paths: Path[], selectedPath: Path, selectedMode: string) {
   useEffect(() => {
     removeCurrentSafetyPathLayers(map)
-    setRankList(rankPaths(paths))
-    addUnselectedSafetyPathsLayer(map, paths.filter(p => p !== selectedPath))
-    addSelectedSafetyPathsLayer(map, selectedPath, rankList)
+    selectedModeKey = selectedMode;
+    addUnselectedSafetyPathsLayer(
+      map,
+      paths.filter(p => p !== selectedPath)
+    );
+    //console.log(selectedMode)
+    addSelectedSafetyPathsLayer(map, selectedPath);
     return () => {
-      removeCurrentSafetyPathLayers(map)
-    }
-  }, [map, paths, selectedPath])
-}
-
-function rankPaths(paths: Path[]) {
-  const rankArray: number[] = [];
-  let bestRank = 0;
-  let bestPath: Path | null = null;
-
-  paths.forEach((path) => {
-    let feature = new GeoJSON().readFeatures(createSelectedPath(path))
-    let averageNum = feature[0].getProperties().averageNumber
-    let distance = path.distance
-    if (averageNum !== undefined) {
-      let rank = distance * 0.5 + averageNum * 0.5
-      if (rank >= bestRank) {
-        bestPath = path;
-        bestRank = rank;
-      }
-      rankArray.push(rank);
-    }
-  });
-  rankArray.sort((a, b) => b - a)
-  console.log(rankArray)
-  return rankArray;
+      removeCurrentSafetyPathLayers(map);
+    };
+  }, [map, paths, selectedPath, selectedMode]);
 }
 
 function removeCurrentSafetyPathLayers(map: Map) {
   map.getLayers()
     .getArray()
     .filter(l => l.get(safetyPathsLayerKey) || l.get(selectedSafetyPathLayerKey))
-    .forEach(l => map.removeLayer(l))
+    .forEach(l => map.removeLayer(l));
 }
 
 function addUnselectedSafetyPathsLayer(map: Map, paths: Path[]) {
-  const style = new Style({
-    stroke: new Stroke({
-      color: '#d70015',
-      width: 5,
-      lineCap: 'round',
-      lineJoin: 'round',
-    }),
-  })
-
+  const features = new GeoJSON().readFeatures(createUnselectedPaths(paths));
+  const fragmentedFeatures = fragmentFeatures(features);
   const layer = new VectorLayer({
     source: new VectorSource({
-      features: new GeoJSON().readFeatures(createUnselectedPaths(paths)),
+      features: fragmentedFeatures,
     }),
-    style: (feature) => {
-      const segmentNumber = feature.get('segmentNumber')
-      const color = getSafetyColor(segmentNumber)
-      style.getStroke().setColor(color)
-      return style
-    },
-    opacity: 1,
-  })
-  layer.set(safetyPathsLayerKey, true)
-  layer.setZIndex(1.1)
-  map.addLayer(layer)
+    style: createStyleFunction,
+    opacity: 0.5,
+  });
+  layer.set(safetyPathsLayerKey, true);
+  layer.setZIndex(1.1);
+  map.addLayer(layer);
 }
 
-function addSelectedSafetyPathsLayer(map: Map, selectedPath: Path, rankList: number[]) {
-  const style = new Style({
-    stroke: new Stroke({
-      color: '#d70015',
-      width: 14,
-      lineCap: 'round',
-      lineJoin: 'round',
-    }),
-    text: new Text({
-      text: "",
-      textAlign: 'center',
-      textBaseline: 'middle',
-      offsetY: -10,
-      offsetX: 10,
-      stroke: new Stroke({ color: '#ffffff', width: 2 }),
-    }),
-  })
-
-  const selectedLayer = new VectorLayer({
+function addSelectedSafetyPathsLayer(map: Map, selectedPath: Path) {
+  const features = new GeoJSON().readFeatures(createSelectedPath(selectedPath));
+  const fragmentedFeatures = fragmentFeatures(features);
+  const layer = new VectorLayer({
     source: new VectorSource({
-      features: new GeoJSON().readFeatures(createSelectedPath(selectedPath)),
+      features: fragmentedFeatures,
     }),
-    style: (feature) => {
-      let numSelectedPath = selectedPath.distance * 0.5 + feature.get('averageNumber') * 0.5
-      let rank = 0
-      rankList.forEach((num, index) => {
-        if (num == numSelectedPath) {
-          rank = index + 1
-        }
-      })
-      const segmentNumber = feature.get('segmentNumber')
-      const color = getSafetyColor(segmentNumber)
-      style.getText().setText(segmentNumber.toString() + ' (safe rank: ' + rank + ')');
-      style.getStroke().setColor(color)
-      return style
-    },
+    style: createStyleFunction,
     opacity: 1,
-  })
-
-
-  selectedLayer.set(safetyPathsLayerKey, true);
-  selectedLayer.setZIndex(1.2);
-  map.addLayer(selectedLayer);
-
+  });
+  layer.set(selectedSafetyPathLayerKey, true);
+  layer.setZIndex(2.1);
+  map.addLayer(layer);
 }
-
 
 function createUnselectedPaths(paths: Path[]) {
   const featureCollection: FeatureCollection = {
     type: 'FeatureCollection',
-    features: paths.flatMap((path) => {
-      let coordinates = path.points.coordinates.map(c => fromLonLat(c))
-
-      return coordinates.slice(0, -1).map((c, i) => {
-        const segmentCoordinates = [c, coordinates[i + 1]]
-        const segmentNumber = i % 6 // Assign a unique segment number to each segment
-        return {
-          type: 'Feature',
-          properties: {
-            segmentNumber: segmentNumber,
-          },
-          geometry: {
-            type: 'LineString',
-            coordinates: segmentCoordinates,
-          },
-        }
-      })
-    }),
-  }
-  return featureCollection
-}
-
-function createSelectedPath(path: Path) {
-  const segmentCount = path.points.coordinates.length - 1;
-  let sumSegmentNumber = 0;
-
-  const featureCollection: FeatureCollection = {
-    type: 'FeatureCollection',
-    features: path.points.coordinates.slice(0, -1).map((c, i) => {
-      const segmentCoordinates = [fromLonLat(c), fromLonLat(path.points.coordinates[i + 1])];
-      const segmentNumber = i % 6; // Assign a unique segment number to each segment
-
-      sumSegmentNumber += segmentNumber;
-
+    features: paths.map((path, index) => {
       return {
         type: 'Feature',
         properties: {
-          segmentNumber: segmentNumber,
-          averageNumber: 0, // Placeholder, will be updated later
-          rank: 0,// Placeholder, will be updated later
+          index,
         },
         geometry: {
-          type: 'LineString',
-          coordinates: segmentCoordinates,
+          ...path.points,
+          coordinates: path.points.coordinates.map(c => fromLonLat(c)),
         },
       };
     }),
   };
-
-  // Calculate average number
-  const averageNumber = segmentCount > 0 ? sumSegmentNumber / segmentCount : 0;
-
-  // Update averageNumber property in each feature
-  featureCollection.features.forEach((feature) => {
-    if (feature.properties) {
-      feature.properties.averageNumber = averageNumber;
-    }
-  })
   return featureCollection;
 }
 
-
-function getSafetyColor(segmentNumber: number) {
-  const colors = [
-    '#ffa500', // Orange
-    '#ffff00', // Yellow
-    '#008000', // Green
-    '#0000ff', // Blue
-    '#800080', // Purple
-  ]
-  return colors[segmentNumber]
+function createSelectedPath(path: Path) {
+  const featureCollection: FeatureCollection = {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          ...path.points,
+          coordinates: path.points.coordinates.map(c => fromLonLat(c)),
+        },
+      },
+    ],
+  };
+  return featureCollection;
 }
 
-function createButton(text: string, onClick: () => void): HTMLButtonElement {
-  const button = document.createElement('button');
-  button.innerHTML = text;
-  button.addEventListener('click', onClick);
-  return button;
-}
-
-function createSlider(map: Map, paths: Path[], rankList: number[]) {
-  const sliderContainer = document.createElement('div');
-  sliderContainer.className = 'slider-container';
-
-  const slider = document.createElement('input');
-  slider.type = 'range';
-  slider.min = '0';
-  slider.max = '1';
-  slider.value = '0.2';
-  slider.step = '0.1';
-  slider.className = 'slider';
-
-  const label = document.createElement('label');
-  label.innerHTML = 'Slider';
-
-  const selectButton = createButton('Select the top safe path', () => {
-
-    paths.forEach(path => {
-      let feature = new GeoJSON().readFeatures(createSelectedPath(path))
-      let averageNum = feature[0].getProperties().averageNumber
-      let distance = path.distance
-      let index = rankList.findIndex((num) => num === 0.5 * averageNum + 0.5 * distance);
-      if (index == 0) {
-        addSelectedSafetyPathsLayer(map, path, rankList);
-      }
-    })
+function createStyleFunction(feature: FeatureLike, resolution: number) {
+  const style = new Style({
+    stroke: new Stroke({
+      color: getColor(feature, selectedModeKey),
+      width: 6,
+      lineCap: 'square',
+      lineJoin: 'round',
+    }),
   });
-
-  sliderContainer.appendChild(label);
-  sliderContainer.appendChild(slider);
-  sliderContainer.appendChild(selectButton);
-
-  slider.addEventListener('input', (event) => {
-    let ratio = Number(slider.value);
-    rankPaths(paths);
-  });
-
-  map.getViewport().appendChild(sliderContainer);
+  return style;
 }
+
+function getColor(feature: FeatureLike, selectedModeKey: string) {
+  const colorsLength = 4
+  const featureId = feature.getId();
+  if (typeof featureId === 'string') {
+    const randomIndex = Math.abs(hashCode(featureId)) % colorsLength;
+    
+    //const randomIndex = hashCode(featureId)
+    //console.log(randomIndex)
+    if(selectedModeKey == 'roadCondition'){
+      return safetyScoreToColorsRoadCondition[randomIndex];
+    }
+    if(selectedModeKey == 'trafficCongestion'){
+      console.log(safetyScoreToColorsTrafficCongestion[randomIndex])
+      return safetyScoreToColorsTrafficCongestion[randomIndex];
+    }
+    
+  }
+  // Return a default color if featureId is undefined or not a string
+  return '#00ff00';
+}
+
+// Hash code function to generate a unique number for each feature ID
+function hashCode(str: string) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  //console.log(hash)
+  return hash
+}
+
+// Generate a consistent ID for each segment based on the segment coordinates
+function getSegmentIdDependOnMode(start: number[], end: number[], selectedMode: string) {
+  //console.log(start)
+  if(selectedMode == 'roadCondition'){
+    return `${start[0]}`
+  }
+  if(selectedMode == 'trafficCongestion'){
+    return `${end[0]}`
+  }
+  return ''
+}
+/**
+ *
+ * Breaks down @param features with LineString geometry
+ * @returns smaller LineString features
+ */
+function fragmentFeatures(features: Feature<Geometry>[]) {
+  const fragmentedFeatures: Feature<Geometry>[] = [];
+  features.forEach(f => {
+    const geometry = f.getGeometry();
+    if (!(geometry instanceof LineString)) {
+      fragmentedFeatures.push(f);
+    }
+    const lineString = geometry as LineString;
+    lineString.forEachSegment((start, end) => {
+      const fragment = new LineString([start, end]);
+      const feature = new Feature(fragment);
+      feature.setId(getSegmentIdDependOnMode(start, end, selectedModeKey)); // Set a consistent ID for each segment
+      console.log(feature)
+      fragmentedFeatures.push(feature);
+    });
+  });
+  return fragmentedFeatures;
+}
+
