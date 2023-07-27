@@ -1,6 +1,6 @@
 import Store from '@/stores/Store'
-import Dispatcher, { Action } from '@/stores/Dispatcher'
-import { ClearPoints, ClearRoute, ReadyToReduceRoute, RemovePoint, RouteRequestSuccess, SafeModeRequest, SafeModeRequestsToSend, SetPoint, SetSelectedPath } from '@/actions/Actions'
+import { Action } from '@/stores/Dispatcher'
+import { ClearPoints, ClearRoute, RemovePoint, RouteRequestSuccess, SetPoint, SetSelectedPath } from '@/actions/Actions'
 import QueryStore from '@/stores/QueryStore'
 import { Path, RoutingArgs, RoutingResult } from '@/api/graphhopper'
 
@@ -146,7 +146,7 @@ export default class RouteStore extends Store<RouteStoreState> {
         const subRequests = this.queryStore.state.currentRequest.subRequests
         const subRequest = subRequests.find(subRequest => subRequest.args === routingArgs)
         if (subRequest) {
-            return subRequest.middlePointsAdded
+            return subRequest.middlePointsAdded ?? false
         }
         return false
     }

@@ -254,20 +254,3 @@ export interface SafeModeRequest {
     request: RoutingArgs
     middlePointsAdded: boolean
 }
-
-export class SafeModeRequestsToSend implements Action {
-    readonly requests: SafeModeRequest[]
-    constructor(requests: SafeModeRequest[]) {
-        this.requests = requests
-    }
-}
-
-export class ReadyToReduceRoute implements Action {
-    readonly result: RoutingResult
-    readonly request: RoutingArgs
-
-    constructor(request: RoutingArgs, result: RoutingResult) {
-        this.result = result
-        this.request = request
-    }
-}

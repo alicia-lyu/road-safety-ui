@@ -12,8 +12,6 @@ import {
     RemovePoint,
     RouteRequestFailed,
     RouteRequestSuccess,
-    SafeModeRequest,
-    SafeModeRequestsToSend,
     SetCustomModel,
     SetCustomModelEnabled,
     SetPoint,
@@ -82,7 +80,7 @@ export enum RequestState {
 export interface SubRequest {
     readonly args: RoutingArgs
     readonly state: RequestState
-    readonly middlePointsAdded: boolean
+    readonly middlePointsAdded?: boolean
 }
 
 export default class QueryStore extends Store<QueryStoreState> {
