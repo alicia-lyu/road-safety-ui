@@ -82,6 +82,7 @@ export enum RequestState {
 export interface SubRequest {
     readonly args: RoutingArgs
     readonly state: RequestState
+    readonly middlePointsAdded: boolean
 }
 
 export default class QueryStore extends Store<QueryStoreState> {
@@ -364,16 +365,11 @@ export default class QueryStore extends Store<QueryStoreState> {
                 // with safe routing mode
                 // We first send a fast request without alternatives 
                 // which returns a result of fastest
-                const safeModeRequests: SafeModeRequest[] = []
                 const firstFastRequest = QueryStore.buildRouteRequest({
                     ...state,
                     maxAlternativeRoutes: 1
                 })
                 requests = [firstFastRequest]
-                safeModeRequests.push({
-                    request: firstFastRequest,
-                    middlePointsAdded: false
-                })
 
                 // ... and then a second, slower request including alternatives if they are enabled.
                 if (
@@ -383,10 +379,6 @@ export default class QueryStore extends Store<QueryStoreState> {
                 ) {
                     const secondRequest = QueryStore.buildRouteRequest(state)
                     requests.push(secondRequest)
-                    safeModeRequests.push({
-                        request: secondRequest,
-                        middlePointsAdded: false
-                    })
                 }
                     
 
@@ -398,12 +390,7 @@ export default class QueryStore extends Store<QueryStoreState> {
                         maxAlternativeRoutes: 1,
                     }))
                     requests.push(newRequest)
-                    safeModeRequests.push({
-                        request: newRequest,
-                        middlePointsAdded: true
-                    })
                 }
-                Dispatcher.dispatch(new SafeModeRequestsToSend(safeModeRequests))
             }
             
             return {
@@ -415,10 +402,11 @@ export default class QueryStore extends Store<QueryStoreState> {
     }
 
     private send(args: RoutingArgs[], zoom: boolean) {
-        const subRequests = args.map(arg => {
+        const subRequests = args.map((arg, index) => {
             return {
                 args: arg,
                 state: RequestState.SENT,
+                middlePointsAdded: this.state.safeRoutingEnabled ? index > 1 : false
             }
         })
 

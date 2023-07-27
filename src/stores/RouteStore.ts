@@ -10,8 +10,6 @@ export interface RouteStoreState {
 }
 
 export default class RouteStore extends Store<RouteStoreState> {
-    private safeModeRequestsToBeSent: SafeModeRequest[]
-
     private static getEmptyPath(): Path {
         return {
             bbox: undefined,
@@ -50,7 +48,6 @@ export default class RouteStore extends Store<RouteStoreState> {
     constructor(queryStore: QueryStore) {
         super(RouteStore.getInitialState())
         this.queryStore = queryStore
-        this.safeModeRequestsToBeSent = []
     }
 
     reduce(state: RouteStoreState, action: Action): RouteStoreState {
@@ -68,14 +65,7 @@ export default class RouteStore extends Store<RouteStoreState> {
             action instanceof RemovePoint
         ) {
             console.log("State cleared 1")
-            this.safeModeRequestsToBeSent = []
             return RouteStore.getInitialState()
-        } else if (action instanceof SafeModeRequestsToSend) {
-            // console.log("SafeModeRequestToSend")
-            return this.prepareForSafeModeRequest(state, action)
-        } else if (action instanceof ReadyToReduceRoute) {
-            console.log("ReadyToReduceRoute")
-            return this.reduceRouteAgainstRequest(state, action)
         }
         return state
     }
@@ -103,23 +93,14 @@ export default class RouteStore extends Store<RouteStoreState> {
         }
         if (RouteStore.containsPaths(action.result.paths)) {
             if (this.queryStore.state.safeRoutingEnabled) {
-                this.waitForSafeModeRequest(routingArgs).then(() => {
-                    console.log("Corresponding safe mode request received: ", JSON.stringify(routingArgs.points))
-                    // console.log(this.safeModeRequestsToBeSent)
-                    Dispatcher.dispatch(new ReadyToReduceRoute(routingArgs, routingResult))
-                })
-                return state;
+                const stateWithNewPaths = this.reduceRouteAgainstSubRequest(state, action)
+                return stateWithNewPaths
             }
-        } else {
-            return {
-                routingResult: routingResult,
-                selectedPath: routingResult.paths[0],
-            };
         }
-        return RouteStore.getInitialState();
+        return state
     }
 
-    private reduceRouteAgainstRequest(state: RouteStoreState, action: ReadyToReduceRoute): RouteStoreState {
+    private reduceRouteAgainstSubRequest(state: RouteStoreState, action: RouteRequestSuccess): RouteStoreState {
         const routingResult: RoutingResult = action.result;
         const routingArgs: RoutingArgs = action.request;
         const middlePointAdded = this.getIfMiddlePointAdded(routingArgs);
@@ -161,34 +142,11 @@ export default class RouteStore extends Store<RouteStoreState> {
         }
 
 
-    /**
-     * @param action SafeModeRequestToSend gives us the routing args of the request that is to be sent and whether middlePoints are to be deleted
-     * @returns the new state with paths reduced from the temp store
-     */
-    private prepareForSafeModeRequest(state: RouteStoreState, action: SafeModeRequestsToSend): RouteStoreState {
-        // console.log("Safe mode request to be sent: ", action.request)
-        this.safeModeRequestsToBeSent = action.requests
-        return state
-    }
-
-    private async waitForSafeModeRequest(safeModeRequest: RoutingArgs): Promise<void> {
-        return new Promise((resolve, reject) => {
-            const interval = setInterval(() => {
-                for (const safeModeRequestToBeSent of this.safeModeRequestsToBeSent) {
-                    if (JSONCompare(safeModeRequestToBeSent.request, safeModeRequest)) {
-                        clearInterval(interval)
-                        resolve()
-                    }
-                }
-                // console.log("Waiting for safe mode request: ", safeModeRequest)
-            }, 200)
-        })
-    }
-
     private getIfMiddlePointAdded(routingArgs: RoutingArgs): boolean {
-        const safeModeRequest = this.safeModeRequestsToBeSent.find(safeModeRequest => safeModeRequest.request === routingArgs)
-        if (safeModeRequest) {
-            return safeModeRequest.middlePointsAdded
+        const subRequests = this.queryStore.state.currentRequest.subRequests
+        const subRequest = subRequests.find(subRequest => subRequest.args === routingArgs)
+        if (subRequest) {
+            return subRequest.middlePointsAdded
         }
         return false
     }
