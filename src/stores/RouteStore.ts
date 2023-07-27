@@ -128,18 +128,22 @@ export default class RouteStore extends Store<RouteStoreState> {
                 selectedPath: restoredPaths[0]
             }
         } else {
-                return {
-                    routingResult: {
-                        ...state.routingResult,
-                        paths: [
-                            ...state.routingResult.paths,
-                            ...routingResult.paths
-                        ]
-                    },
-                    selectedPath: routingResult.paths[0],
-                };
-            }
+            const newPaths = state.routingResult.paths
+            routingResult.paths.forEach(path => {
+                const pathAlreadyExists = newPaths.find(newPath => JSONCompare(newPath, path))
+                if (!pathAlreadyExists) {
+                    newPaths.push(path)
+                }
+            })
+            return {
+                routingResult: {
+                    ...state.routingResult,
+                    paths: newPaths
+                },
+                selectedPath: routingResult.paths[0],
+            };
         }
+    }
 
 
     private getIfMiddlePointAdded(routingArgs: RoutingArgs): boolean {
