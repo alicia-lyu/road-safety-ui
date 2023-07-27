@@ -22,6 +22,7 @@ const safetyScoreToColors = [
 // Copied from UsePathsLayer.tsx
 // Code related to accessNetworkLayer deleted, might have backlash
 export default function useSafetyPathsLayer(map: Map, paths: Path[], selectedPath: Path) {
+
     useEffect(() => {
         removeCurrentSafetyPathLayers(map)
         addUnselectedSafetyPathsLayer(
@@ -109,16 +110,30 @@ function createSelectedPath(path: Path) {
 }
 
 function createStyleFunction(feature: FeatureLike, resolution: number) {
-    const randomSafetyScore = Math.floor(Math.random() * 4)
+    const safetyScore = getScoreWithResolutionAndIndex(resolution, feature)
     const style = new Style({
         stroke: new Stroke({
-            color: safetyScoreToColors[randomSafetyScore],
+            color: safetyScoreToColors[safetyScore],
             width: 6,
             lineCap: 'square',
             lineJoin: 'round',
         }),
     })
     return style
+}
+
+function getScoreWithResolutionAndIndex(resolution: number, feature: FeatureLike) {
+    const featureProperties = feature.getProperties()
+    // const motherIndex = featureProperties.motherIndex
+    const index = featureProperties.index
+    if (index === undefined) {
+        return Math.floor(Math.random() * 4)
+    }
+    let granularity = Math.floor(resolution / 15) * 4 + 1
+    // How granular the sections are colored. 
+    // The larger, the less granular—more sections are colored the same.
+    // console.log("resolution: ",resolution)
+    return Math.floor(index / granularity) % 4
 }
 
 /**
@@ -128,16 +143,22 @@ function createStyleFunction(feature: FeatureLike, resolution: number) {
  */
 function fragmentFeatures(features: Feature<Geometry>[]) {
     const fragmentedFeatures: Feature<Geometry>[] = []
-    features.forEach(f => {
+    features.forEach((f, i)  => {
         const geometry = f.getGeometry()
         if (!(geometry instanceof LineString)) {
             fragmentedFeatures.push(f)
         }
         const lineString = geometry as LineString
+        let j = 0
         lineString.forEachSegment((start, end) => {
             const fragment = new LineString([start, end])
-            const feature = new Feature(fragment)
+            const feature = new Feature({
+                geometry: fragment,
+                motherIndex: i,
+                index: j
+            })
             fragmentedFeatures.push(feature)
+            j++
         })
     })
     return fragmentedFeatures
