@@ -250,7 +250,14 @@ export class DrawAreas implements Action {
 
 export class ToggleSafeRoutingEnabled implements Action {}
 
-export interface SafeModeRequest {
-    request: RoutingArgs
-    middlePointsAdded: boolean
+export class RouteStoreCleared implements Action {}
+
+export class RouteStoreLoaded implements Action {
+    readonly newPaths: Path[]
+    constructor(newPaths: Path[]) {
+        this.newPaths = newPaths
+    }
 }
+
+
+

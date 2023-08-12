@@ -23,6 +23,7 @@ import { Bbox, RoutingArgs, RoutingProfile } from '@/api/graphhopper'
 import { calcDist } from '@/distUtils'
 import config from 'config'
 import { customModel2prettyString, customModelExamples } from '@/sidebar/CustomModelExamples'
+import { calcGaussianRandom } from './utils'
 
 export interface Coordinate {
     lat: number
@@ -583,14 +584,4 @@ function getMaxDistance(queryPoints: QueryPoint[]): number {
         max = Math.max(dist, max)
     }
     return max
-}
-
-// Standard Normal variate using Box-Muller transform.
-// See https://stackoverflow.com/a/36481059
-function calcGaussianRandom(mean = 0, stdev = 1) {
-    const u = 1 - Math.random(); // Converting [0,1) to (0,1]
-    const v = Math.random();
-    const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
-    // Transform to the desired mean and standard deviation:
-    return z * stdev + mean;
 }

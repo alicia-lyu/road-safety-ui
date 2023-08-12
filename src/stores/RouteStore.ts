@@ -1,6 +1,6 @@
 import Store from '@/stores/Store'
-import { Action } from '@/stores/Dispatcher'
-import { ClearPoints, ClearRoute, RemovePoint, RouteRequestSuccess, SetPoint, SetSelectedPath } from '@/actions/Actions'
+import Dispatcher, { Action } from '@/stores/Dispatcher'
+import { ClearPoints, ClearRoute, RemovePoint, RouteRequestSuccess, RouteStoreCleared, RouteStoreLoaded, SetPoint, SetSelectedPath } from '@/actions/Actions'
 import QueryStore from '@/stores/QueryStore'
 import { Path, RoutingArgs, RoutingResult } from '@/api/graphhopper'
 
@@ -64,7 +64,7 @@ export default class RouteStore extends Store<RouteStoreState> {
             action instanceof ClearPoints ||
             action instanceof RemovePoint
         ) {
-            console.log("State cleared 1")
+            Dispatcher.dispatch(new RouteStoreCleared())
             return RouteStore.getInitialState()
         }
         return state
@@ -107,6 +107,7 @@ export default class RouteStore extends Store<RouteStoreState> {
         if (middlePointAdded) {
             const restoredPaths: Path[] = [];
             for (const path of routingResult.paths) {
+                // TO-DO: detect duplicates
                 const restoredSnappedWaypointsCoordinates = path.snapped_waypoints.coordinates.filter((coordinate, i) => i % 2 !== 1);
                 const restoredPath = {
                     ...path,
@@ -117,6 +118,7 @@ export default class RouteStore extends Store<RouteStoreState> {
                 };
                 restoredPaths.push(restoredPath);
             }
+            Dispatcher.dispatch(new RouteStoreLoaded(restoredPaths))
             return {
                 routingResult: {
                     ...state.routingResult,
@@ -125,7 +127,7 @@ export default class RouteStore extends Store<RouteStoreState> {
                         ...restoredPaths
                     ]
                 },
-                selectedPath: restoredPaths[0]
+                selectedPath: state.routingResult.paths[0] ?? restoredPaths[0]
             }
         } else {
             const newPaths = state.routingResult.paths
@@ -135,12 +137,13 @@ export default class RouteStore extends Store<RouteStoreState> {
                     newPaths.push(path)
                 }
             })
+            Dispatcher.dispatch(new RouteStoreLoaded(newPaths))
             return {
                 routingResult: {
                     ...state.routingResult,
                     paths: newPaths
                 },
-                selectedPath: routingResult.paths[0],
+                selectedPath: state.routingResult.paths[0] ?? routingResult.paths[0],
             };
         }
     }
