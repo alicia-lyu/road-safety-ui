@@ -1,12 +1,15 @@
 import { RouteStoreCleared, RouteStoreLoaded } from "@/actions/Actions";
-import { IndexStoreState } from ".";
+import { IndexStoreState, SegmentWithIndex } from ".";
 import RouteStore from "./RouteStore";
 import Store from "./Store";
 import { Path } from "@/api/graphhopper";
+import { calcGaussianRandom } from './utils'
 
 
 export default class SafetyStore extends Store<IndexStoreState> {
     readonly routeStore: RouteStore
+    private static indexStoreState: IndexStoreState = { Segments: [] }
+
 
     constructor(routeStore: RouteStore) {
         super(SafetyStore.getInitialState())
@@ -43,7 +46,33 @@ export default class SafetyStore extends Store<IndexStoreState> {
     private static generateSafetyForPaths(newPaths: Path[]): IndexStoreState {
         // TODO (Jingwen)
         // For normal distribution, use calcGaussianRandom in ./utils.ts
-        throw new Error("Method not implemented.");
+        newPaths.forEach(path=>{
+            let coordinatesArray = path.points.coordinates
+            coordinatesArray.forEach(coordinates=>{
+                if(!this.checkSegmentInStore(coordinates, this.indexStoreState)){
+                    let safetyIndex = calcGaussianRandom(0.1, 0.01)
+                    let newSegment: SegmentWithIndex = {
+                        coordinates: [coordinates],
+                        index: safetyIndex
+                    }
+                    this.indexStoreState.Segments.push(newSegment)
+                }
+            })
+        })
+        return this.indexStoreState
     }
+
+    private static checkSegmentInStore(coordinatesInput: number[], indexStoreState: IndexStoreState): boolean {
+        if (indexStoreState.Segments != null) {
+            for (let segmentWithIndex of indexStoreState.Segments) {
+                let coordinates = segmentWithIndex.coordinates
+                if (coordinates[0][0] == coordinatesInput[0] && coordinates[0][1] == coordinatesInput[1]) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
 
 }
