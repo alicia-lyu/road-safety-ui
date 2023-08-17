@@ -29,6 +29,7 @@ import { createMap, getMap, setMap } from '@/map/map'
 import MapFeatureStore from '@/stores/MapFeatureStore'
 import SettingsStore from '@/stores/SettingsStore'
 import { ErrorAction, InfoReceived } from '@/actions/Actions'
+import SafetyStore from './stores/SafetyStore'
 
 console.log(`Source code: https://github.com/graphhopper/graphhopper-maps/tree/${GIT_SHA}`)
 
@@ -43,11 +44,13 @@ setApi(config.routingApi, config.geocodingApi, apiKey || '')
 const initialCustomModelStr = url.searchParams.get('custom_model')
 const queryStore = new QueryStore(getApi(), initialCustomModelStr)
 const routeStore = new RouteStore(queryStore)
+const safetyStore = new SafetyStore(routeStore)
 
 setStores({
     settingsStore: new SettingsStore(),
     queryStore: queryStore,
     routeStore: routeStore,
+    safetyStore: safetyStore,
     infoStore: new ApiInfoStore(),
     errorStore: new ErrorStore(),
     mapOptionsStore: new MapOptionsStore(),
