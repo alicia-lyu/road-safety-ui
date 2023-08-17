@@ -1,11 +1,25 @@
 import { RouteStoreCleared, RouteStoreLoaded } from "@/actions/Actions";
-import { IndexStoreState, SegmentWithIndex } from ".";
 import RouteStore from "./RouteStore";
 import Store from "./Store";
-import { Path } from "@/api/graphhopper";
 import { calcGaussianRandom } from './utils'
+import { Path } from "@/api/graphhopper";
 
-export default class SafetyStore extends Store<IndexStoreState> {
+// index of safety or congestion
+export interface SafetyStoreState {
+    paths: PathWithSafety[]
+}
+
+export interface SegmentWithSafety {
+    coordinates: number[][],
+    index: number
+}
+
+export interface PathWithSafety extends Path {
+    segments: SegmentWithSafety[],
+    overAllIndex: number
+}
+
+export default class SafetyStore extends Store<SafetyStoreState> {
     readonly routeStore: RouteStore
 
     private static safestPathFound: boolean = false
@@ -16,13 +30,13 @@ export default class SafetyStore extends Store<IndexStoreState> {
         this.routeStore = routeStore
     }
 
-    private static getInitialState(): IndexStoreState {
+    private static getInitialState(): SafetyStoreState {
         return {
             paths: []
         }
     }
 
-    reduce(state: IndexStoreState, action: any): IndexStoreState {
+    reduce(state: SafetyStoreState, action: any): SafetyStoreState {
         if (action instanceof RouteStoreCleared) {
             return SafetyStore.getInitialState()
         } else if (action instanceof RouteStoreLoaded) {
@@ -44,7 +58,7 @@ export default class SafetyStore extends Store<IndexStoreState> {
      *                 in addition to the paths already in route store
      * @returns the new state of SafetyStore
      */
-    private static generateSafetyForPaths(state: IndexStoreState, action: RouteStoreLoaded): IndexStoreState {
+    private static generateSafetyForPaths(state: SafetyStoreState, action: RouteStoreLoaded): SafetyStoreState {
         const newPaths = action.newPaths;
         const middlePointAdded = action.middlePointsAdded; 
         // Use ⬆ and safestPathFound and secondSafestPathFound to find the #1, #2 safest paths:
@@ -62,7 +76,7 @@ export default class SafetyStore extends Store<IndexStoreState> {
                 if (!this.checkSegmentInStore(coordinates, this.indexStoreState)) {
                     // replace this.indexStoreState with state
                     let safetyIndex = calcGaussianRandom(0.1, 0.01)
-                    let newSegment: SegmentWithIndex = {
+                    let newSegment: SegmentWithSafety = {
                         coordinates: [coordinates],
                         index: safetyIndex
                     }
@@ -70,14 +84,15 @@ export default class SafetyStore extends Store<IndexStoreState> {
                 }
             })
         })
-        return this.indexStoreState
+        return this.indexStoreState 
     }
 
     private static checkSegmentInStore(coordinatesInput: number[], indexStoreState: IndexStoreState): boolean {
+        // change indexStoreState to safetyStoreState
         // TODO (Jingwen): edit this method to use the updated data structure of IndexStoreState
         if (indexStoreState.Segments != null) {
-            for (let segmentWithIndex of indexStoreState.Segments) {
-                let coordinates = segmentWithIndex.coordinates
+            for (let SegmentWithSafety of indexStoreState.Segments) {
+                let coordinates = SegmentWithSafety.coordinates
                 if (coordinates[0][0] == coordinatesInput[0] && coordinates[0][1] == coordinatesInput[1]) {
                     return true
                 }
