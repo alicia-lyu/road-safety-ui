@@ -1,3 +1,5 @@
+import { Path } from "@/api/graphhopper"
+
 
 // index of safety or congestion
 export interface IndexStoreState {
@@ -9,7 +11,7 @@ export interface SegmentWithIndex {
     index: number
 }
 
-export interface PathWithIndex {
+export interface PathWithIndex extends Path {
     segments: SegmentWithIndex[],
     overAllIndex: number
 }

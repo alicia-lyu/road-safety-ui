@@ -254,8 +254,10 @@ export class RouteStoreCleared implements Action {}
 
 export class RouteStoreLoaded implements Action {
     readonly newPaths: Path[]
-    constructor(newPaths: Path[]) {
+    readonly middlePointsAdded: boolean
+    constructor(newPaths: Path[], middlePointsAdded: boolean) {
         this.newPaths = newPaths
+        this.middlePointsAdded = middlePointsAdded
     }
 }
 

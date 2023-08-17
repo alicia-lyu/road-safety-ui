@@ -118,7 +118,7 @@ export default class RouteStore extends Store<RouteStoreState> {
                 };
                 restoredPaths.push(restoredPath);
             }
-            Dispatcher.dispatch(new RouteStoreLoaded(restoredPaths))
+            Dispatcher.dispatch(new RouteStoreLoaded(restoredPaths, true))
             return {
                 routingResult: {
                     ...state.routingResult,
@@ -137,7 +137,7 @@ export default class RouteStore extends Store<RouteStoreState> {
                     newPaths.push(path)
                 }
             })
-            Dispatcher.dispatch(new RouteStoreLoaded(newPaths))
+            Dispatcher.dispatch(new RouteStoreLoaded(newPaths, false))
             return {
                 routingResult: {
                     ...state.routingResult,
