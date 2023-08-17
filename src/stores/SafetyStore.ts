@@ -4,21 +4,26 @@ import RouteStore from "./RouteStore";
 import Store from "./Store";
 import { Path } from "@/api/graphhopper";
 import { calcGaussianRandom } from './utils'
+import QueryStore from "./QueryStore";
 
 
 export default class SafetyStore extends Store<IndexStoreState> {
     readonly routeStore: RouteStore
-    private static indexStoreState: IndexStoreState = { Segments: [] }
+    readonly queryStore: QueryStore
+    // We use queryStore to designate the default safest path:
+    // the first path in this.routeStore.state.routingResult.paths which has middlePoints added.
+    private static indexStoreState: IndexStoreState = { paths: [] }
 
 
-    constructor(routeStore: RouteStore) {
+    constructor(routeStore: RouteStore, queryStore: QueryStore) {
         super(SafetyStore.getInitialState())
         this.routeStore = routeStore
+        this.queryStore = queryStore
     }
 
     private static getInitialState(): IndexStoreState {
         return {
-            Segments: []
+            paths: []
         }
     }
 
@@ -46,10 +51,10 @@ export default class SafetyStore extends Store<IndexStoreState> {
     private static generateSafetyForPaths(newPaths: Path[]): IndexStoreState {
         // TODO (Jingwen)
         // For normal distribution, use calcGaussianRandom in ./utils.ts
-        newPaths.forEach(path=>{
+        newPaths.forEach(path => {
             let coordinatesArray = path.points.coordinates
-            coordinatesArray.forEach(coordinates=>{
-                if(!this.checkSegmentInStore(coordinates, this.indexStoreState)){
+            coordinatesArray.forEach(coordinates => {
+                if (!this.checkSegmentInStore(coordinates, this.indexStoreState)) {
                     let safetyIndex = calcGaussianRandom(0.1, 0.01)
                     let newSegment: SegmentWithIndex = {
                         coordinates: [coordinates],
@@ -73,6 +78,4 @@ export default class SafetyStore extends Store<IndexStoreState> {
         }
         return false
     }
-
-
 }
