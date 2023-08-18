@@ -1,35 +1,27 @@
 import { Map } from 'ol'
 import { Path } from '@/api/graphhopper'
-import { FeatureCollection } from 'geojson'
 import { useEffect } from 'react'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import { GeoJSON } from 'ol/format'
 import { Stroke, Style } from 'ol/style'
-import { fromLonLat } from 'ol/proj'
 import Feature, { FeatureLike } from 'ol/Feature'
-import { Geometry, LineString } from 'ol/geom'
+import { LineString } from 'ol/geom'
+import { PathWithSafety } from '@/stores/SafetyStore'
 
 const safetyPathsLayerKey = 'safetyPathsLayer'
 const selectedSafetyPathLayerKey = 'selectedSafetyPathLayer'
-const safetyScoreToColors = [
-    '#f63428',
-    '#ff8c00',
-    '#ffcc00',
-    '#02d46a',
-]
 
 // Copied from UsePathsLayer.tsx
 // Code related to accessNetworkLayer deleted, might have backlash
-export default function useSafetyPathsLayer(map: Map, paths: Path[], selectedPath: Path) {
+export default function useSafetyPathsLayer(map: Map, paths: PathWithSafety[], selectedPath: Path) {
 
     useEffect(() => {
         removeCurrentSafetyPathLayers(map)
-        addUnselectedSafetyPathsLayer(
+        addSafetyPathsLayer(
             map,
             paths.filter(p => p != selectedPath)
         )
-        addSelectedSafetyPathsLayer(map, selectedPath)
         return () => {
             removeCurrentSafetyPathLayers(map)
         }
@@ -43,12 +35,11 @@ function removeCurrentSafetyPathLayers(map: Map) {
         .forEach(l => map.removeLayer(l))
 }
 
-function addUnselectedSafetyPathsLayer(map: Map, paths: Path[]) {
-    const features = new GeoJSON().readFeatures(createUnselectedPaths(paths))
-    const fragmentedFeatures = fragmentFeatures(features)
+function addSafetyPathsLayer(map: Map, paths: PathWithSafety[]) {
+    const features = createSegments(paths)
     const layer = new VectorLayer({
         source: new VectorSource({
-            features: fragmentedFeatures
+            features: features
         }),
         style: createStyleFunction,
         opacity: 0.5,
@@ -58,108 +49,31 @@ function addUnselectedSafetyPathsLayer(map: Map, paths: Path[]) {
     map.addLayer(layer)
 }
 
-function addSelectedSafetyPathsLayer(map: Map, selectedPath: Path) {
-    const features = new GeoJSON().readFeatures(createSelectedPath(selectedPath))
-    const fragmentedFeatures = fragmentFeatures(features)
-    const layer = new VectorLayer({
-        source: new VectorSource({
-            features: fragmentedFeatures
-        }),
-        style: createStyleFunction,
-        opacity: 1,
+function createSegments(paths: PathWithSafety[]) {
+    const segmentFeatures: Feature[] = [];
+    paths.forEach(path => {
+        path.segments.forEach(segment => {
+            const geometry = new LineString(segment.coordinates)
+            const feature = new Feature({
+                geometry: geometry,
+                safety: segment.index
+            })
+            segmentFeatures.push(feature)
+        })
     })
-    layer.set(selectedSafetyPathLayerKey, true)
-    layer.setZIndex(2.1)
-    map.addLayer(layer)
-}
-
-function createUnselectedPaths(paths: Path[]) {
-    const featureCollection: FeatureCollection = {
-        type: 'FeatureCollection',
-        features: paths.map((path, index) => {
-            return {
-                type: 'Feature',
-                properties: {
-                    index,
-                },
-                geometry: {
-                    ...path.points,
-                    coordinates: path.points.coordinates.map(c => fromLonLat(c)),
-                },
-            }
-        }),
-    }
-    return featureCollection
-}
-
-function createSelectedPath(path: Path) {
-    const featureCollection: FeatureCollection = {
-        type: 'FeatureCollection',
-        features: [
-            {
-                type: 'Feature',
-                properties: {},
-                geometry: {
-                    ...path.points,
-                    coordinates: path.points.coordinates.map(c => fromLonLat(c)),
-                },
-            },
-        ],
-    }
-    return featureCollection
+   return segmentFeatures
 }
 
 function createStyleFunction(feature: FeatureLike, resolution: number) {
-    const safetyScore = getScoreWithResolutionAndIndex(resolution, feature)
+    const safetyScore = feature.getProperties().safety
+    const color = `[255, 69, 58, ${(5 - safetyScore) / 5}]`
     const style = new Style({
         stroke: new Stroke({
-            color: safetyScoreToColors[safetyScore],
+            color: color,
             width: 6,
             lineCap: 'square',
             lineJoin: 'round',
         }),
     })
     return style
-}
-
-function getScoreWithResolutionAndIndex(resolution: number, feature: FeatureLike) {
-    const featureProperties = feature.getProperties()
-    // const motherIndex = featureProperties.motherIndex
-    const index = featureProperties.index
-    if (index === undefined) {
-        return Math.floor(Math.random() * 4)
-    }
-    let granularity = Math.floor(resolution / 15) * 4 + 1
-    // How granular the sections are colored. 
-    // The larger, the less granular—more sections are colored the same.
-    // console.log("resolution: ",resolution)
-    return Math.floor(index / granularity) % 4
-}
-
-/**
- * 
- * Breaks down @param features with LineString geometry
- * @returns smaller LineString features
- */
-function fragmentFeatures(features: Feature<Geometry>[]) {
-    const fragmentedFeatures: Feature<Geometry>[] = []
-    features.forEach((f, i)  => {
-        const geometry = f.getGeometry()
-        if (!(geometry instanceof LineString)) {
-            fragmentedFeatures.push(f)
-        }
-        const lineString = geometry as LineString
-        let j = 0
-        lineString.forEachSegment((start, end) => {
-            const fragment = new LineString([start, end])
-            const feature = new Feature({
-                geometry: fragment,
-                motherIndex: i,
-                index: j
-            })
-            fragmentedFeatures.push(feature)
-            j++
-        })
-    })
-    return fragmentedFeatures
 }
