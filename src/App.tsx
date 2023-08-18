@@ -9,6 +9,7 @@ import {
     getPathDetailsStore,
     getQueryStore,
     getRouteStore,
+    getSafetyStore,
     getSettingsStore,
 } from '@/stores/Stores'
 import MapComponent from '@/map/MapComponent'
@@ -53,6 +54,7 @@ export default function App() {
     const [query, setQuery] = useState(getQueryStore().state)
     const [info, setInfo] = useState(getApiInfoStore().state)
     const [route, setRoute] = useState(getRouteStore().state)
+    const [safety, setSafety] = useState(getSafetyStore().state)
     const [error, setError] = useState(getErrorStore().state)
     const [mapOptions, setMapOptions] = useState(getMapOptionsStore().state)
     const [pathDetails, setPathDetails] = useState(getPathDetailsStore().state)
@@ -65,6 +67,7 @@ export default function App() {
         const onQueryChanged = () => setQuery(getQueryStore().state)
         const onInfoChanged = () => setInfo(getApiInfoStore().state)
         const onRouteChanged = () => setRoute(getRouteStore().state)
+        const onSafetyChanged = () => setSafety(getSafetyStore().state)
         const onErrorChanged = () => setError(getErrorStore().state)
         const onMapOptionsChanged = () => setMapOptions(getMapOptionsStore().state)
         const onPathDetailsChanged = () => setPathDetails(getPathDetailsStore().state)
@@ -74,6 +77,7 @@ export default function App() {
         getQueryStore().register(onQueryChanged)
         getApiInfoStore().register(onInfoChanged)
         getRouteStore().register(onRouteChanged)
+        getSafetyStore().register(onSafetyChanged)
         getErrorStore().register(onErrorChanged)
         getMapOptionsStore().register(onMapOptionsChanged)
         getPathDetailsStore().register(onPathDetailsChanged)
@@ -82,6 +86,7 @@ export default function App() {
         onQueryChanged()
         onInfoChanged()
         onRouteChanged()
+        onSafetyChanged()
         onErrorChanged()
         onMapOptionsChanged()
         onPathDetailsChanged()
@@ -92,6 +97,7 @@ export default function App() {
             getQueryStore().deregister(onQueryChanged)
             getApiInfoStore().deregister(onInfoChanged)
             getRouteStore().deregister(onRouteChanged)
+            getSafetyStore().deregister(onSafetyChanged)
             getErrorStore().deregister(onErrorChanged)
             getMapOptionsStore().deregister(onMapOptionsChanged)
             getPathDetailsStore().deregister(onPathDetailsChanged)
@@ -110,7 +116,7 @@ export default function App() {
     useQueryPointsLayer(map, query.queryPoints)
     usePathDetailsLayer(map, pathDetails)
 
-    useSafetyPathsLayer(map, route.routingResult.paths, route.selectedPath);
+    useSafetyPathsLayer(map, safety.paths, route.selectedPath);
 
     const isSmallScreen = useMediaQuery({ query: '(max-width: 44rem)' })
     return (
