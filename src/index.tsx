@@ -11,6 +11,7 @@ import {
     getPathDetailsStore,
     getQueryStore,
     getRouteStore,
+    getSafetyStore,
     getSettingsStore,
     setStores,
 } from '@/stores/Stores'
@@ -29,7 +30,7 @@ import { createMap, getMap, setMap } from '@/map/map'
 import MapFeatureStore from '@/stores/MapFeatureStore'
 import SettingsStore from '@/stores/SettingsStore'
 import { ErrorAction, InfoReceived } from '@/actions/Actions'
-import SafetyStore from './stores/SafetyStore'
+import SafetyStore from '@/stores/SafetyStore'
 
 console.log(`Source code: https://github.com/graphhopper/graphhopper-maps/tree/${GIT_SHA}`)
 
@@ -64,6 +65,7 @@ setMap(createMap())
 Dispatcher.register(getSettingsStore())
 Dispatcher.register(getQueryStore())
 Dispatcher.register(getRouteStore())
+Dispatcher.register(getSafetyStore())
 Dispatcher.register(getApiInfoStore())
 Dispatcher.register(getErrorStore())
 Dispatcher.register(getMapOptionsStore())

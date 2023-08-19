@@ -3,7 +3,6 @@ import { Path } from '@/api/graphhopper'
 import { useEffect } from 'react'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
-import { GeoJSON } from 'ol/format'
 import { Stroke, Style } from 'ol/style'
 import Feature, { FeatureLike } from 'ol/Feature'
 import { LineString } from 'ol/geom'
@@ -15,12 +14,12 @@ const selectedSafetyPathLayerKey = 'selectedSafetyPathLayer'
 // Copied from UsePathsLayer.tsx
 // Code related to accessNetworkLayer deleted, might have backlash
 export default function useSafetyPathsLayer(map: Map, paths: PathWithSafety[], selectedPath: Path) {
-
     useEffect(() => {
+        console.log("Safety Paths", paths)
         removeCurrentSafetyPathLayers(map)
         addSafetyPathsLayer(
             map,
-            paths.filter(p => p != selectedPath)
+            paths
         )
         return () => {
             removeCurrentSafetyPathLayers(map)

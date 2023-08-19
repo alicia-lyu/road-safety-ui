@@ -45,6 +45,9 @@ export default class RouteStore extends Store<RouteStoreState> {
 
     private readonly queryStore: QueryStore
 
+    private middlePointAdded = false
+    private newPaths: Path[] = []
+
     constructor(queryStore: QueryStore) {
         super(RouteStore.getInitialState())
         this.queryStore = queryStore
@@ -64,10 +67,25 @@ export default class RouteStore extends Store<RouteStoreState> {
             action instanceof ClearPoints ||
             action instanceof RemovePoint
         ) {
-            Dispatcher.dispatch(new RouteStoreCleared())
             return RouteStore.getInitialState()
         }
         return state
+    }
+
+    afterReceive(action: Action): void {
+        if (action instanceof RouteRequestSuccess) {
+            // console.log("RouteStore.afterReceive", action)
+            Dispatcher.dispatch(new RouteStoreLoaded(this.newPaths, this.middlePointAdded))
+            // console.log(this.newPaths)
+        } else if (
+            action instanceof SetPoint ||
+            action instanceof ClearRoute ||
+            action instanceof ClearPoints ||
+            action instanceof RemovePoint
+        ) {
+            // console.log("RouteStore.afterReceive", action)
+            Dispatcher.dispatch(new RouteStoreCleared())
+        }
     }
 
     private static getInitialState(): RouteStoreState {
@@ -86,7 +104,7 @@ export default class RouteStore extends Store<RouteStoreState> {
     private reduceRouteReceived(state: RouteStoreState, action: RouteRequestSuccess): RouteStoreState {
         const routingResult: RoutingResult = action.result;
         const routingArgs: RoutingArgs = action.request;
-        console.log("Route received:", routingResult.paths.length, "paths", "with", routingArgs.points.length, "points", "and maxAlternativeRoutes", routingArgs.maxAlternativeRoutes)
+        // console.log("Route received:", routingResult.paths.length, "paths", "with", routingArgs.points.length, "points", "and maxAlternativeRoutes", routingArgs.maxAlternativeRoutes)
         if (this.isStaleRequest(action.request)) {
             console.log("Stale request")
             return state
@@ -104,6 +122,7 @@ export default class RouteStore extends Store<RouteStoreState> {
         const routingResult: RoutingResult = action.result;
         const routingArgs: RoutingArgs = action.request;
         const middlePointAdded = this.getIfMiddlePointAdded(routingArgs);
+        this.middlePointAdded = middlePointAdded;
         if (middlePointAdded) {
             const restoredPaths: Path[] = [];
             for (const path of routingResult.paths) {
@@ -118,7 +137,7 @@ export default class RouteStore extends Store<RouteStoreState> {
                 };
                 restoredPaths.push(restoredPath);
             }
-            Dispatcher.dispatch(new RouteStoreLoaded(restoredPaths, true))
+            this.newPaths = restoredPaths
             return {
                 routingResult: {
                     ...state.routingResult,
@@ -129,6 +148,7 @@ export default class RouteStore extends Store<RouteStoreState> {
                 },
                 selectedPath: state.routingResult.paths[0] ?? restoredPaths[0]
             }
+            
         } else {
             const newPaths = state.routingResult.paths
             routingResult.paths.forEach(path => {
@@ -137,7 +157,7 @@ export default class RouteStore extends Store<RouteStoreState> {
                     newPaths.push(path)
                 }
             })
-            Dispatcher.dispatch(new RouteStoreLoaded(newPaths, false))
+            this.newPaths = newPaths
             return {
                 routingResult: {
                     ...state.routingResult,

@@ -5,6 +5,7 @@ export interface Action {
 
 export interface ActionReceiver {
     receive(action: Action): void
+    afterReceive(action: Action): void
 }
 
 export interface NotifyStateChanged {
@@ -22,8 +23,13 @@ class Dispatcher {
             console.error("No calls to 'dispatch' allowed while another dispatch is ongoing.")
         }
         this.isDispatching = true
-        this.receivers.forEach(receiver => receiver.receive(action))
+        this.receivers.forEach(receiver => {
+            receiver.receive(action)
+        })
         this.isDispatching = false
+        this.receivers.forEach(receiver => {
+            receiver.afterReceive(action)
+        })
     }
 
     public register(receiver: ActionReceiver) {

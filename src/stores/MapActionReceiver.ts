@@ -74,6 +74,8 @@ export default class MapActionReceiver implements ActionReceiver {
             }
         }
     }
+
+    afterReceive(action: Action): void {}
 }
 
 function fitBounds(map: Map, bbox: Bbox, isSmallScreen: boolean, mapSize?: number[]) {

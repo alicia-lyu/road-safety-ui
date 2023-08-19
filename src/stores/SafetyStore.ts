@@ -4,8 +4,8 @@ import Store from "./Store";
 import { calcGaussianRandom } from './utils'
 import { v4 as uuidv4 } from 'uuid'
 import { Path } from "@/api/graphhopper";
+import { Action } from "./Dispatcher";
 
-// index of safety or congestion
 export interface SafetyStoreState {
     paths: PathWithSafety[]
 }
@@ -27,10 +27,11 @@ export const pathToIdMap: PathToIdMap = new Map()
 export default class SafetyStore extends Store<SafetyStoreState> {
     readonly routeStore: RouteStore
 
-    private static safestPathFound: boolean = false
-    private static secondSafestPathFound: boolean = false
+    private safestPathFound: boolean = false
+    private secondSafestPathFound: boolean = false
 
     constructor(routeStore: RouteStore) {
+        console.log("SafetyStore constructor")
         super(SafetyStore.getInitialState())
         this.routeStore = routeStore
     }
@@ -41,13 +42,13 @@ export default class SafetyStore extends Store<SafetyStoreState> {
         }
     }
 
-    reduce(state: SafetyStoreState, action: any): SafetyStoreState {
+    reduce(state: SafetyStoreState, action: Action): SafetyStoreState {
         if (action instanceof RouteStoreCleared) {
             return SafetyStore.getInitialState()
         } else if (action instanceof RouteStoreLoaded) {
             // Generate safety index for paths newly added to route store
             // while reserving safety index for paths already in route store
-            return SafetyStore.generateSafetyForPaths(state, action)
+            return this.generateSafetyForPaths(state, action)
         } else {
             return state;
         }
@@ -63,7 +64,7 @@ export default class SafetyStore extends Store<SafetyStoreState> {
      *                 in addition to the paths already in route store
      * @returns the new state of SafetyStore
      */
-    private static generateSafetyForPaths(state: SafetyStoreState, action: RouteStoreLoaded): SafetyStoreState {
+    private generateSafetyForPaths(state: SafetyStoreState, action: RouteStoreLoaded): SafetyStoreState {
         const newPaths = action.newPaths
         const middlePointAdded = action.middlePointsAdded
         // Use ⬆ and safestPathFound and secondSafestPathFound to find the #1, #2 safest paths:
@@ -90,9 +91,12 @@ export default class SafetyStore extends Store<SafetyStoreState> {
         }
         
         return state
+        // ALERT: You shouldn't modify the original state object,
+        //        but instead create a new one and return it.
+        // Keep variables immutable is a good practice to avoid bugs. 
     }
 
-    private static checkSegmentInStore(coordinatesInput: number[], state: SafetyStoreState): boolean {
+    private checkSegmentInStore(coordinatesInput: number[], state: SafetyStoreState): boolean {
         // change indexStoreState to safetyStoreState
         if(state.paths.length > 0) {
             for(let pathWithSafety of state.paths) {
@@ -104,7 +108,7 @@ export default class SafetyStore extends Store<SafetyStoreState> {
         return false
     }
 
-    private static checkSegmentsInPath(coordinatesInput: number[], path: PathWithSafety): boolean {
+    private checkSegmentsInPath(coordinatesInput: number[], path: PathWithSafety): boolean {
         if(path.segments.length > 0){
             for(const segmentEach of path.segments) {
                 let coordinates = segmentEach.coordinates
@@ -116,7 +120,7 @@ export default class SafetyStore extends Store<SafetyStoreState> {
         return false
     }
 
-    private static checkPathInStore(path: Path, state: SafetyStoreState): boolean {
+    private checkPathInStore(path: Path, state: SafetyStoreState): boolean {
         if(state.paths.length > 0 && pathToIdMap != null){
             for(let pathWithSafety of state.paths){
                 if(pathToIdMap.has(path)){
@@ -129,13 +133,13 @@ export default class SafetyStore extends Store<SafetyStoreState> {
         return false
     }
 
-    private static createIdForPath(path:Path): string{
+    private createIdForPath(path:Path): string{
         let id = uuidv4()
         pathToIdMap.set(path,id)
         return id
     }
 
-    private static addCoordinateForPath(pathId: string | undefined, state: SafetyStoreState, segment: SegmentWithSafety){
+    private addCoordinateForPath(pathId: string | undefined, state: SafetyStoreState, segment: SegmentWithSafety){
         if(state.paths.length > 0){
             state.paths.forEach(pathWithSafety=>{
                 if(pathWithSafety.pathId === pathId){
@@ -145,7 +149,7 @@ export default class SafetyStore extends Store<SafetyStoreState> {
         }
     }
 
-    private static addOverAllIndexForPath(pathId: string | undefined, overAllIndex: number, state: SafetyStoreState, ){
+    private addOverAllIndexForPath(pathId: string | undefined, overAllIndex: number, state: SafetyStoreState, ){
         if(state.paths.length > 0){
             state.paths.forEach(pathWithSafety=>{
                 if(pathWithSafety.pathId === pathId){
@@ -155,7 +159,7 @@ export default class SafetyStore extends Store<SafetyStoreState> {
         }
     }
 
-    private static addSafestPathToState(newPaths: Path[], state: SafetyStoreState){
+    private addSafestPathToState(newPaths: Path[], state: SafetyStoreState){
         // the first member is the #1 safest path
         let safestPath = newPaths[0]
         this.safestPathFound = true
@@ -187,7 +191,7 @@ export default class SafetyStore extends Store<SafetyStoreState> {
         }
     }
 
-    private static addSecondSafestPathToState(newPaths: Path[], state: SafetyStoreState){
+    private addSecondSafestPathToState(newPaths: Path[], state: SafetyStoreState){
         // the first member is the #2 safest path
         if(newPaths.length>0){
             let secondSafestPath = newPaths[0]
@@ -220,7 +224,7 @@ export default class SafetyStore extends Store<SafetyStoreState> {
         }
     }
 
-    private static addMorePathToState(newPaths: Path[], state: SafetyStoreState){
+    private addMorePathToState(newPaths: Path[], state: SafetyStoreState){
         for (let i = 1; i < newPaths.length; i++) {
             // the path not #1 and #2 safe
             let path = newPaths[i]

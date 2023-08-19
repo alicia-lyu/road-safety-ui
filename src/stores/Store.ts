@@ -40,4 +40,6 @@ export default abstract class Store<TState> implements ActionReceiver, NotifySta
     private notifyChanged() {
         this._subscriptions.forEach(f => f())
     }
+
+    afterReceive(action: Action): void {}
 }
