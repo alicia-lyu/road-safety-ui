@@ -22,7 +22,8 @@
         "ol-mapbox-style": "10.6.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
-        "react-responsive": "^9.0.0"
+        "react-responsive": "^9.0.0",
+        "uuid": "^9.0.0"
     },
     "devDependencies": {
         "@svgr/webpack": "^8.0.1",
@@ -30,6 +31,7 @@
         "@types/jest": "^29.4.1",
         "@types/react": "^18.0.21",
         "@types/react-dom": "^18.0.6",
+        "@types/uuid": "^9.0.2",
         "copy-webpack-plugin": "^11.0.0",
         "css-loader": "^6.7.1",
         "favicons": "^7.0.1",
@@ -50,3 +52,4 @@
         "webpack-merge": "^5.8.0"
     }
 }
+
