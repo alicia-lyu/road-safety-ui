@@ -31,7 +31,6 @@ export default class SafetyStore extends Store<SafetyStoreState> {
     private secondSafestPathFound: boolean = false
 
     constructor(routeStore: RouteStore) {
-        console.log("SafetyStore constructor")
         super(SafetyStore.getInitialState())
         this.routeStore = routeStore
     }
@@ -50,6 +49,7 @@ export default class SafetyStore extends Store<SafetyStoreState> {
             // while reserving safety index for paths already in route store
             return this.generateSafetyForPaths(state, action)
         } else {
+            //console.log(state)
             return state;
         }
     }
@@ -75,22 +75,29 @@ export default class SafetyStore extends Store<SafetyStoreState> {
         //  #2: mean 3.5, std 1
         //  #3 and beyond: mean 2.5, std 1
         // Also, have a look at the SafetyStoreState interface
-        
+        let newState : SafetyStoreState = {
+            paths: []
+        }
+        if(state.paths.length>0){
+            state.paths.forEach(path =>{
+                newState.paths.push(path)
+            })
+        }
         if(middlePointAdded){
             if(newPaths.length>0){
-                this.addSafestPathToState(newPaths, state)
+                this.addSafestPathToState(newPaths, newState)
             }
         }
         else{
             if(newPaths.length>0){
-                this.addSecondSafestPathToState(newPaths, state)
+                this.addSecondSafestPathToState(newPaths, newState)
             }
         }
         if(newPaths.length>1){
-            this.addMorePathToState(newPaths, state)
+            this.addMorePathToState(newPaths, newState)
         }
-        
-        return state
+        console.log("state:", newState)
+        return newState
         // ALERT: You shouldn't modify the original state object,
         //        but instead create a new one and return it.
         // Keep variables immutable is a good practice to avoid bugs. 
@@ -101,11 +108,25 @@ export default class SafetyStore extends Store<SafetyStoreState> {
         if(state.paths.length > 0) {
             for(let pathWithSafety of state.paths) {
                 if (this.checkSegmentsInPath(coordinatesInput, pathWithSafety)) {
-                    return true;
+                    return true
                 }
             }
         }
         return false
+    }
+
+    private getSegmentsIndex(coordinatesInput: number[], state: SafetyStoreState) {
+        for(let pathWithSafety of state.paths) {
+            if(pathWithSafety.segments.length > 0){
+                for(const segmentEach of pathWithSafety.segments) {
+                    let coordinates = segmentEach.coordinates
+                    if (coordinates[0][0] == coordinatesInput[0] && coordinates[0][1] == coordinatesInput[1]) {
+                        return segmentEach.index
+                    }
+                }
+            }
+        }
+        throw Error("Error in segment index")
     }
 
     private checkSegmentsInPath(coordinatesInput: number[], path: PathWithSafety): boolean {
@@ -120,7 +141,7 @@ export default class SafetyStore extends Store<SafetyStoreState> {
         return false
     }
 
-    private checkPathInStore(path: Path, state: SafetyStoreState): boolean {
+    private checkPathInStore(path: Path, state: SafetyStoreState) {
         if(state.paths.length > 0 && pathToIdMap != null){
             for(let pathWithSafety of state.paths){
                 if(pathToIdMap.has(path)){
@@ -176,15 +197,23 @@ export default class SafetyStore extends Store<SafetyStoreState> {
             let coordinatePairs = safestPath.points.coordinates
             coordinatePairs.forEach(coordinate=>{
                 // if the segment is not in the store
-                let safetyIndex = calcGaussianRandom(4.5, 1);
                 if(!this.checkSegmentInStore(coordinate, state)){
+                    let safetyIndex = calcGaussianRandom(4.5, 1)
                     let newSegment: SegmentWithSafety = {
                         coordinates: [coordinate],
                         index: safetyIndex
                     }
                     this.addCoordinateForPath(pathToIdMap.get(safestPath),state,newSegment)
+                    indexSum = indexSum+safetyIndex
+                }else{
+                    let safetyIndex = this.getSegmentsIndex(coordinate, state)
+                    let newSegment: SegmentWithSafety = {
+                        coordinates: [coordinate],
+                        index: safetyIndex
+                    }
+                    this.addCoordinateForPath(pathToIdMap.get(safestPath),state,newSegment)
+                    indexSum = indexSum+safetyIndex
                 }
-                indexSum = indexSum+safetyIndex // should add out of the loop since there is shared segments between paths
             })
             let overAllIndex = indexSum/safestPath.points.coordinates.length
             this.addOverAllIndexForPath(pathToIdMap.get(safestPath),overAllIndex,state)
@@ -193,34 +222,39 @@ export default class SafetyStore extends Store<SafetyStoreState> {
 
     private addSecondSafestPathToState(newPaths: Path[], state: SafetyStoreState){
         // the first member is the #2 safest path
-        if(newPaths.length>0){
-            let secondSafestPath = newPaths[0]
-            this.secondSafestPathFound = true
-            // if the path is not in the store
-            if(!this.checkPathInStore(secondSafestPath, state)){
-                // create the PathWithSafety for the path
-                let pathWithSafety: PathWithSafety = {
-                    segments: [], // will be update in the later code
-                    overAllIndex: 0, // will be update in the later code
-                    pathId: this.createIdForPath(secondSafestPath)
-                }
-                state.paths.push(pathWithSafety)
-                let coordinatePairs = secondSafestPath.points.coordinates
-                let indexSum = 0
-                let safetyIndex = calcGaussianRandom(3.5, 1);
-                coordinatePairs.forEach(coordinate=>{
-                    if(!this.checkSegmentInStore(coordinate, state)){
-                        let newSegment: SegmentWithSafety = {
-                            coordinates: [coordinate],
-                            index: safetyIndex
-                        }
-                        this.addCoordinateForPath(pathToIdMap.get(secondSafestPath),state,newSegment)
+        let secondSafestPath = newPaths[0]
+        this.secondSafestPathFound = true
+        if(!this.checkPathInStore(secondSafestPath, state)){
+            // create the PathWithSafety for the path
+            let pathWithSafety: PathWithSafety = {
+                segments: [], // will be update in the later code
+                overAllIndex: 0, // will be update in the later code
+                pathId: this.createIdForPath(secondSafestPath)
+            }
+            state.paths.push(pathWithSafety)
+            let coordinatePairs = secondSafestPath.points.coordinates
+            let indexSum = 0
+            coordinatePairs.forEach(coordinate=>{
+                if(!this.checkSegmentInStore(coordinate, state)){
+                    let safetyIndex = calcGaussianRandom(3.5, 1)
+                    let newSegment: SegmentWithSafety = {
+                        coordinates: [coordinate],
+                        index: safetyIndex
+                    }
+                    this.addCoordinateForPath(pathToIdMap.get(secondSafestPath),state,newSegment)
+                    indexSum = indexSum+safetyIndex
+                }else{
+                    let safetyIndex = this.getSegmentsIndex(coordinate, state)
+                    let newSegment: SegmentWithSafety = {
+                        coordinates: [coordinate],
+                        index: safetyIndex
                     }
                     indexSum = indexSum+safetyIndex
-                })
-                let overAllIndex = indexSum/secondSafestPath.points.coordinates.length
-                this.addOverAllIndexForPath(pathToIdMap.get(secondSafestPath),overAllIndex,state)
-            }
+                    this.addCoordinateForPath(pathToIdMap.get(secondSafestPath),state,newSegment)
+                }
+            })
+            let overAllIndex = indexSum/secondSafestPath.points.coordinates.length
+            this.addOverAllIndexForPath(pathToIdMap.get(secondSafestPath),overAllIndex,state)
         }
     }
 
@@ -239,22 +273,29 @@ export default class SafetyStore extends Store<SafetyStoreState> {
                 state.paths.push(pathWithSafety)
                 let coordinatePairs = path.points.coordinates
                 let indexSum = 0
-                let safetyIndex = calcGaussianRandom(2.5, 1);
                 coordinatePairs.forEach(coordinate=>{
+                    let safetyIndex = calcGaussianRandom(2.5, 1)
                     if(!this.checkSegmentInStore(coordinate, state)){
                         let newSegment: SegmentWithSafety = {
                             coordinates: [coordinate],
                             index: safetyIndex
                         }
+                        indexSum = indexSum+safetyIndex
                         this.addCoordinateForPath(pathToIdMap.get(path),state,newSegment)
+                    }else{
+                        let safetyIndex = this.getSegmentsIndex(coordinate, state)
+                        let newSegment: SegmentWithSafety = {
+                            coordinates: [coordinate],
+                            index: safetyIndex
+                        }
+                        this.addCoordinateForPath(pathToIdMap.get(path),state,newSegment)
+                        indexSum = indexSum+safetyIndex
                     }
-                    indexSum = indexSum+safetyIndex
                 })
                 let overAllIndex = indexSum/path.points.coordinates.length
                 this.addOverAllIndexForPath(pathToIdMap.get(path),overAllIndex,state)
             }
         }
     }
-
 
 }
