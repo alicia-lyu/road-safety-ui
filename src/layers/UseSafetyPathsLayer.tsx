@@ -7,6 +7,7 @@ import { Stroke, Style } from 'ol/style'
 import Feature, { FeatureLike } from 'ol/Feature'
 import { LineString } from 'ol/geom'
 import { PathWithSafety } from '@/stores/SafetyStore'
+import { Coordinate } from 'ol/coordinate'
 
 const safetyPathsLayerKey = 'safetyPathsLayer'
 const selectedSafetyPathLayerKey = 'selectedSafetyPathLayer'
@@ -16,18 +17,18 @@ const selectedSafetyPathLayerKey = 'selectedSafetyPathLayer'
 export default function useSafetyPathsLayer(map: Map, paths: PathWithSafety[], selectedPath: Path) {
     useEffect(() => {
         console.log("Safety Paths", paths)
-        removeCurrentSafetyPathLayers(map)
+        removeCurrentSafetyPathsLayers(map)
         addSafetyPathsLayer(
             map,
             paths
         )
         return () => {
-            removeCurrentSafetyPathLayers(map)
+            removeCurrentSafetyPathsLayers(map)
         }
     }, [map, paths, selectedPath])
 }
 
-function removeCurrentSafetyPathLayers(map: Map) {
+function removeCurrentSafetyPathsLayers(map: Map) {
     map.getLayers()
         .getArray()
         .filter(l => l.get(safetyPathsLayerKey) || l.get(selectedSafetyPathLayerKey))
@@ -44,23 +45,27 @@ function addSafetyPathsLayer(map: Map, paths: PathWithSafety[]) {
         opacity: 0.5,
     })
     layer.set(safetyPathsLayerKey, true)
-    layer.setZIndex(1.1)
+    layer.setZIndex(3)
+    console.log("Safety Paths Layer: ", layer)
     map.addLayer(layer)
 }
 
 function createSegments(paths: PathWithSafety[]) {
     const segmentFeatures: Feature[] = [];
     paths.forEach(path => {
-        path.segments.forEach(segment => {
-            const geometry = new LineString(segment.coordinates)
+        path.segments.forEach((start, index) => {
+            if (index == path.segments.length - 1) return
+            const end = path.segments[index + 1]
+            const geometry = new LineString([start.coordinates[0] as Coordinate, end.coordinates[0] as Coordinate])
             const feature = new Feature({
                 geometry: geometry,
-                safety: segment.index
+                safety: start.index
             })
             segmentFeatures.push(feature)
         })
     })
-   return segmentFeatures
+    console.log("Segments: ", segmentFeatures)
+    return segmentFeatures
 }
 
 function createStyleFunction(feature: FeatureLike, resolution: number) {

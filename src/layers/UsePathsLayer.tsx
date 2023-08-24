@@ -22,7 +22,7 @@ const accessNetworkLayerKey = 'accessNetworkLayer'
 
 export default function usePathsLayer(map: Map, paths: Path[], selectedPath: Path, queryPoints: QueryPoint[]) {
     useEffect(() => {
-        // console.log("Paths: ", paths.length)
+        console.log("Paths: ", paths)
         removeCurrentPathLayers(map)
         addUnselectedPathsLayer(
             map,
@@ -60,6 +60,7 @@ function addUnselectedPathsLayer(map: Map, paths: Path[]) {
         opacity: 0.8,
     })
     layer.set(pathsLayerKey, true)
+    console.log("Paths Layer: ", layer)
     layer.setZIndex(1)
     map.addLayer(layer)
 
@@ -143,9 +144,11 @@ function addSelectedPathsLayer(map: Map, selectedPath: Path) {
             lineJoin: 'round',
         }),
     })
+    const features = new GeoJSON().readFeatures(createSelectedPath(selectedPath))
+    console.log("Selected Path Layer: ", features)
     const layer = new VectorLayer({
         source: new VectorSource({
-            features: new GeoJSON().readFeatures(createSelectedPath(selectedPath)),
+            features: features
         }),
         style: () => style,
         opacity: 0.8,
