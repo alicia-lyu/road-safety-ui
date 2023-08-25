@@ -53,21 +53,20 @@ function addSafetyPathsLayer(map: Map, paths: PathWithSafety[]) {
 function createSegments(paths: PathWithSafety[]) {
     const segmentFeatures: Feature[] = [];
     paths.forEach(path => {
-        path.segments.forEach((start, index) => {
-            if (index == path.segments.length - 1) return
-            const end = path.segments[index + 1]
-            const geometry = new LineString([start.coordinates[0] as Coordinate, end.coordinates[0] as Coordinate])
+        path.segments.forEach(segment => {
+            const geometry = new LineString(segment.coordinates)
+            //console.log(geometry)
             const feature = new Feature({
                 geometry: geometry,
-                safety: start.index
+                safety: segment.index
             })
+            //feature.setStyle(createStyleFunction(feature, 100))
+            //console.log(feature)
             segmentFeatures.push(feature)
         })
     })
-    console.log("Segments: ", segmentFeatures)
     return segmentFeatures
 }
-
 function createStyleFunction(feature: FeatureLike, resolution: number) {
     const safetyScore = feature.getProperties().safety
     const color = `[255, 69, 58, ${(5 - safetyScore) / 5}]`
