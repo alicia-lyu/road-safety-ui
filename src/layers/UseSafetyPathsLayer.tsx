@@ -5,12 +5,11 @@ import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import { Stroke, Style } from 'ol/style'
 import Feature, { FeatureLike } from 'ol/Feature'
-import { LineString } from 'ol/geom'
+import { Geometry, LineString } from 'ol/geom'
 import { PathWithSafety } from '@/stores/SafetyStore'
-import { Coordinate } from 'ol/coordinate'
+import { fromLonLat } from 'ol/proj'
 
 const safetyPathsLayerKey = 'safetyPathsLayer'
-const selectedSafetyPathLayerKey = 'selectedSafetyPathLayer'
 
 // Copied from UsePathsLayer.tsx
 // Code related to accessNetworkLayer deleted, might have backlash
@@ -31,7 +30,7 @@ export default function useSafetyPathsLayer(map: Map, paths: PathWithSafety[], s
 function removeCurrentSafetyPathsLayers(map: Map) {
     map.getLayers()
         .getArray()
-        .filter(l => l.get(safetyPathsLayerKey) || l.get(selectedSafetyPathLayerKey))
+        .filter(l => l.get(safetyPathsLayerKey))
         .forEach(l => map.removeLayer(l))
 }
 
@@ -42,7 +41,7 @@ function addSafetyPathsLayer(map: Map, paths: PathWithSafety[]) {
             features: features
         }),
         style: createStyleFunction,
-        opacity: 0.5,
+        opacity: 1,
     })
     layer.set(safetyPathsLayerKey, true)
     layer.setZIndex(3)
@@ -51,10 +50,12 @@ function addSafetyPathsLayer(map: Map, paths: PathWithSafety[]) {
 }
 
 function createSegments(paths: PathWithSafety[]) {
-    const segmentFeatures: Feature[] = [];
+    const segmentFeatures: Feature<Geometry>[] = [];
     paths.forEach(path => {
         path.segments.forEach(segment => {
-            const geometry = new LineString(segment.coordinates)
+            const geometry = new LineString(segment.coordinates.map(
+                coordinate => fromLonLat(coordinate)
+            ))
             //console.log(geometry)
             const feature = new Feature({
                 geometry: geometry,
@@ -69,7 +70,8 @@ function createSegments(paths: PathWithSafety[]) {
 }
 function createStyleFunction(feature: FeatureLike, resolution: number) {
     const safetyScore = feature.getProperties().safety
-    const color = `[255, 69, 58, ${(5 - safetyScore) / 5}]`
+    const color = `rgba(255, 69, 58, ${(5 - safetyScore) / 5})`
+    // console.log("Color: ", color)
     const style = new Style({
         stroke: new Stroke({
             color: color,
