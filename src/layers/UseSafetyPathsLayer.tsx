@@ -19,7 +19,8 @@ export default function useSafetyPathsLayer(map: Map, paths: PathWithSafety[], s
         removeCurrentSafetyPathsLayers(map)
         addSafetyPathsLayer(
             map,
-            paths
+            paths,
+            selectedPath
         )
         return () => {
             removeCurrentSafetyPathsLayers(map)
@@ -34,8 +35,8 @@ function removeCurrentSafetyPathsLayers(map: Map) {
         .forEach(l => map.removeLayer(l))
 }
 
-function addSafetyPathsLayer(map: Map, paths: PathWithSafety[]) {
-    const features = createSegments(paths)
+function addSafetyPathsLayer(map: Map, paths: PathWithSafety[], selectedPath: Path) {
+    const features = createSegments(pickSelectedPath(paths, selectedPath))
     const layer = new VectorLayer({
         source: new VectorSource({
             features: features
@@ -47,6 +48,10 @@ function addSafetyPathsLayer(map: Map, paths: PathWithSafety[]) {
     layer.setZIndex(3)
     console.log("Safety Paths Layer: ", layer)
     map.addLayer(layer)
+}
+
+function pickSelectedPath(paths: PathWithSafety[], selectedPath: Path): PathWithSafety[] {
+    return paths.filter(path => path.points == selectedPath.points)
 }
 
 function createSegments(paths: PathWithSafety[]) {
