@@ -48,6 +48,30 @@ function addSafetyPathsLayer(map: Map, paths: PathWithSafety[], selectedPath: Pa
     layer.setZIndex(3)
     console.log("Safety Paths Layer: ", layer)
     map.addLayer(layer)
+    hoverOnFeature(map);
+}
+
+function hoverOnFeature(map: Map) {
+    let selected: Feature | null = null;
+    const selectStyle = new Style({
+        stroke: new Stroke({
+            color: 'rgba(255, 255, 255, 0.9)',
+            width: 10,
+        }),
+    });
+    map.on('pointermove', function (e) {
+        if (selected !== null) {
+            selected.setStyle(undefined);
+            selected = null;
+        }
+
+        map.forEachFeatureAtPixel(e.pixel, function (f) {
+            const feature = f as Feature;
+            selected = feature
+            feature.setStyle(selectStyle)
+            return true;
+        });
+    });
 }
 
 function pickSelectedPath(paths: PathWithSafety[], selectedPath: Path): PathWithSafety[] {
