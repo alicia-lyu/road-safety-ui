@@ -1,3 +1,4 @@
+import { SafeRouteRover } from "@/actions/Actions";
 import { Action } from "./Dispatcher";
 import { Coordinate } from "./QueryStore";
 import Store from "./Store";
@@ -5,7 +6,7 @@ import Store from "./Store";
 export interface SafetyFeatureStoreState {
     safetyScore: number,
     explanationProperties: object,
-    coordinate: Coordinate
+    coordinate: Coordinate | null
 }
 
 
@@ -14,11 +15,20 @@ export default class SafetyFeatureStore extends Store<SafetyFeatureStoreState> {
         super({
             safetyScore: 0,
             explanationProperties: {},
-            coordinate: {lat: 0, lng: 0}
+            coordinate: null
         })
     }
 
     reduce(state: SafetyFeatureStoreState, action: Action): SafetyFeatureStoreState {
+        if (action instanceof SafeRouteRover) {
+            console.log("SafetyFeatureStore: SafeRouteRover", action)
+            return {
+                ...state,
+                safetyScore: action.safetyStore,
+                explanationProperties: action.explanationProperties,
+                coordinate: action.coordinate
+            }
+        }
         return state
     }
 }

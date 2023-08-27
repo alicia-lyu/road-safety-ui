@@ -238,6 +238,18 @@ export class InstructionClicked implements Action {
     }
 }
 
+export class SafeRouteRover implements Action {
+    readonly coordinate: Coordinate | null
+    readonly safetyStore: number
+    readonly explanationProperties: object
+
+    constructor(coordinate: Coordinate | null, safetyStore: number, explanationProperties: object) {
+        this.coordinate = coordinate
+        this.safetyStore = safetyStore
+        this.explanationProperties = explanationProperties
+    }
+}
+
 export class ToggleDistanceUnits implements Action {}
 
 export class DrawAreas implements Action {

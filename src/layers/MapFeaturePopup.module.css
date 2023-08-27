@@ -5,3 +5,19 @@
     padding: 5px 10px 5px 10px;
     border-radius: 10px;
 }
+
+.explanation {
+    list-style-type: disc;
+    margin: inherit;
+    padding: inherit;
+}
+
+.explanation > li > ul {
+    list-style-type: circle;
+    margin: inherit;
+    padding: inherit;
+}
+
+.explanation > li > ul > li {
+    margin-left: 2em;
+}

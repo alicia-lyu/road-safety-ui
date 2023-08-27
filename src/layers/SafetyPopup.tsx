@@ -7,7 +7,7 @@ interface SafetyPopupProps {
     map: Map,
     safetyScore: number,
     explanationProperties: object,
-    coordinate: Coordinate
+    coordinate: Coordinate | null
 }
 
 /**
@@ -18,9 +18,16 @@ export default function SafetyPopup({ map, safetyScore, explanationProperties, c
         <MapPopup map={map} coordinate={coordinate}>
             <div className={styles.popup}>
                 <p>{`Safety Score: ${safetyScore}`}</p>
-                <ul>
+                <ul className={styles.explanation}>
                     {Object.entries(explanationProperties).map(([k, v], index) => {
-                        return <li key={index}>{`${k}=${v}`}</li>
+                        if (v instanceof Array) {
+                            return <li key={index}>
+                                <ul>{`${k}:`}
+                                    {v.map((v, index) => <li key={index}>{v}</li>)}
+                                </ul>
+                            </li>
+                        }
+                        return <li key={index}>{`${k}: ${v}`}</li>
                     })}
                 </ul>
             </div>

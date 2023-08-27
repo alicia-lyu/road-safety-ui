@@ -16,7 +16,6 @@ interface PathDetailPopupProps {
  */
 export default function PathDetailPopup({ map, pathDetails }: PathDetailPopupProps) {
     const showDistanceInMiles = useContext(ShowDistanceInMilesContext)
-    console.log('PathDetailPopup', pathDetails)
     return (
         // todo: use createMapMarker from heightgraph?
         // {createMapMarker(point.elevation, point.description, showDistanceInMiles)}

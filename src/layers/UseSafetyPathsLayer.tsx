@@ -1,4 +1,4 @@
-import { Map } from 'ol'
+import { Map, MapBrowserEvent } from 'ol'
 import { Path } from '@/api/graphhopper'
 import { useEffect } from 'react'
 import VectorLayer from 'ol/layer/Vector'
@@ -7,7 +7,9 @@ import { Stroke, Style } from 'ol/style'
 import Feature, { FeatureLike } from 'ol/Feature'
 import { Geometry, LineString } from 'ol/geom'
 import { PathWithSafety } from '@/stores/SafetyStore'
-import { fromLonLat } from 'ol/proj'
+import { fromLonLat, toLonLat } from 'ol/proj'
+import Dispatcher from '@/stores/Dispatcher'
+import { SafeRouteRover } from '@/actions/Actions'
 
 const safetyPathsLayerKey = 'safetyPathsLayer'
 
@@ -46,31 +48,28 @@ function addSafetyPathsLayer(map: Map, paths: PathWithSafety[], selectedPath: Pa
     layer.set(safetyPathsLayerKey, true)
     layer.setZIndex(3)
     map.addLayer(layer)
-    hoverOnFeature(map);
+    addHoveringEffect(map, layer)
 }
 
-function hoverOnFeature(map: Map) {
-    let selected: Feature | null = null;
-    const selectStyle = new Style({
-        stroke: new Stroke({
-            color: 'rgba(255, 255, 255, 0.9)',
-            width: 10,
-        }),
-    });
-    map.on('pointermove', function (e) {
-        if (selected !== null) {
-            selected.setStyle(undefined);
-            selected = null;
+function addHoveringEffect(map: Map, layer: VectorLayer<VectorSource<Geometry>>) {
+    map.on('pointermove', onHover)
+    function onHover (e: MapBrowserEvent<UIEvent>) {
+        const features = map.getFeaturesAtPixel(e.pixel, {
+            layerFilter: l => l === layer,
+            hitTolerance: 5,
+        })
+        if (features.length > 0) {
+            const lonLat = toLonLat(e.coordinate)
+            // we only display the properties of the first feature
+            const featureProperties = features[0].getProperties()
+            Dispatcher.dispatch(new SafeRouteRover({ lat: lonLat[1], lng: lonLat[0] }, featureProperties.safety, featureProperties.explanation));
+        } else {
+            Dispatcher.dispatch(new SafeRouteRover(null, 0, {}))
         }
-
-        map.forEachFeatureAtPixel(e.pixel, function (f) {
-            const feature = f as Feature;
-            selected = feature
-            feature.setStyle(selectStyle)
-            return true;
-        });
-    });
+    }
 }
+
+
 
 function pickSelectedPath(paths: PathWithSafety[], selectedPath: Path): PathWithSafety[] {
     return paths.filter(path => path.points == selectedPath.points)
@@ -85,7 +84,8 @@ function createSegments(paths: PathWithSafety[]) {
             ))
             const feature = new Feature({
                 geometry: geometry,
-                safety: segment.index
+                safety: segment.index,
+                explanation: generateExplanation(segment.index)
             })
             //feature.setStyle(createStyleFunction(feature, 100))
             segmentFeatures.push(feature)
@@ -105,4 +105,28 @@ function createStyleFunction(feature: FeatureLike, resolution: number) {
         }),
     })
     return style
+}
+
+function generateExplanation(safetyScore: number): object {
+    const accidentsPastYear = Math.floor((5 - safetyScore) * 3);
+    const dangerousFactors = [
+        'Slippery Road', 'Potholes', 'Uneven Road', 
+        'Heavy Traffic', 'Moderate Traffic', 'Light Traffic', 
+        'Rainy Weather', 'Foggy Weather', 'Clear Weather'
+    ];
+    const selectedFactors = [];
+    const numberOfFactors = 5 - safetyScore; // Select more factors for lower safety scores
+    const confidence = Math.random();
+
+    for (let i = 0; i < numberOfFactors; i++) {
+        const randomIndex = Math.floor(Math.random() * dangerousFactors.length);
+        selectedFactors.push(dangerousFactors[randomIndex]);
+        dangerousFactors.splice(randomIndex, 1); // Remove selected factor from the pool
+    }
+
+    return {
+        'Confidence': `${Math.floor(confidence * 100)}%`,
+        'Accidents in the past year': accidentsPastYear,
+        'Dangerous factors': selectedFactors,
+    }
 }

@@ -13,7 +13,6 @@ interface MapFeaturePopupProps {
  * The popup shown when certain map features are hovered. For example a road of the routing graph layer.
  */
 export default function MapFeaturePopup({ map, properties, coordinate }: MapFeaturePopupProps) {
-    console.log('MapFeaturePopup', properties)
     return (
         <MapPopup map={map} coordinate={coordinate}>
             <div className={styles.popup}>
