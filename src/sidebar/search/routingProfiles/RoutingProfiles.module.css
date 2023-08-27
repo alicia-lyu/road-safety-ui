@@ -21,6 +21,12 @@
     color: #275dad;
 }
 
+.profileLi {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
 .profileBtn {
     border-radius: 50%;
     margin: 0.1em;

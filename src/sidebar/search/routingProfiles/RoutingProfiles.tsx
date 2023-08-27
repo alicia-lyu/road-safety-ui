@@ -1,4 +1,3 @@
-import React from 'react'
 import styles from './RoutingProfiles.module.css'
 import Dispatcher from '@/stores/Dispatcher'
 import { SetVehicleProfile } from '@/actions/Actions'
@@ -15,8 +14,10 @@ import ScooterIcon from './scooter.svg'
 import SmallTruckIcon from './small_truck.svg'
 import TruckIcon from './truck.svg'
 import WheelchairIcon from './wheelchair.svg'
+import GearIcon from './gear.svg'
 import { tr } from '@/translation/Translation'
 import CustomModelBoxSVG from '@/sidebar/open_custom_model.svg'
+import { useMemo } from 'react'
 
 export default function ({
     routingProfiles,
@@ -31,6 +32,7 @@ export default function ({
     toggleCustomModelBox: () => void
     customModelBoxEnabled: boolean
 }) {
+    routingProfiles = useMemo(() => moveCustomProfilesToRear(routingProfiles), [routingProfiles]);
     return (
         <div className={styles.profilesParent}>
             <PlainButton
@@ -47,7 +49,7 @@ export default function ({
                             ? styles.selectedProfile + ' ' + styles.profileBtn
                             : styles.profileBtn
                     return (
-                        <li key={profile.name}>
+                        <li key={profile.name} className={styles.profileLi}>
                             <PlainButton
                                 title={tr(profile.name)}
                                 onClick={() => Dispatcher.dispatch(new SetVehicleProfile(profile))}
@@ -91,6 +93,29 @@ function getIcon(profile: RoutingProfile) {
         case 'wheelchair':
             return <WheelchairIcon />
         default:
-            return profile.name
+            return <GearIcon alt={profile.name}/>
     }
+}
+
+function moveCustomProfilesToRear(profiles: RoutingProfile[]) {
+    const customProfiles = profiles.filter(profile => !isRegular(profile))
+    const regularProfiles = profiles.filter(profile => isRegular(profile))
+    return regularProfiles.concat(customProfiles)
+}
+
+function isRegular(profile: RoutingProfile): boolean {
+    const regularProfileNames = [
+        'car',
+        'small_truck',
+        'truck',
+        'scooter',
+        'foot',
+        'hike',
+        'bike',
+        'mtb',
+        'racingbike',
+        'motorcycle',
+        'wheelchair',
+    ]
+    return regularProfileNames.includes(profile.name)
 }
