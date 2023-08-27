@@ -92,6 +92,9 @@ export default class SafetyStore extends Store<SafetyStoreState> {
                 this.addSafestPathToState(newPaths, newState)
             }
         }
+        // while:
+        // const safetyRank = getSafetyRank(middlePointAdded, this.safestPathFound, this.secondSafestPathFound)
+        // addSafePathToState(newPaths, newState, safetyRank)
         else {
             if (newPaths.length > 0) {
                 this.addSecondSafestPathToState(newPaths, newState)
@@ -152,6 +155,7 @@ export default class SafetyStore extends Store<SafetyStoreState> {
                 let endCoordinateInput = coordinatesInput[1]
                 if (startCoordinate[0] == startCoordinateInput[0] && startCoordinate[1] == startCoordinateInput[1] &&
                     endCoordinate[0] == endCoordinateInput[0] && endCoordinate[1] == endCoordinateInput[1]) {
+                    // JSON compare
                     return true
                 }
             }
@@ -168,6 +172,8 @@ export default class SafetyStore extends Store<SafetyStoreState> {
                     }
                 }
             }
+            // declarative programming (readable)
+            // imperative programming
         }
         return false
     }
@@ -188,6 +194,8 @@ export default class SafetyStore extends Store<SafetyStoreState> {
         }
     }
 
+    // Only test and consider legal cases
+    // path should be non-empty
     private addOverAllIndexForPath(pathId: string | undefined, overAllIndex: number, state: SafetyStoreState,) {
         if (state.paths.length > 0) {
             state.paths.forEach(pathWithSafety => {

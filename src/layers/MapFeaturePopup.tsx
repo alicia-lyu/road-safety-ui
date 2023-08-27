@@ -1,4 +1,3 @@
-import React from 'react'
 import styles from '@/layers/MapFeaturePopup.module.css'
 import MapPopup from '@/layers/MapPopup'
 import { Map } from 'ol'

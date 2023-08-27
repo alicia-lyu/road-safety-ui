@@ -2,7 +2,6 @@ import { Map } from 'ol'
 import PathDetailPopup from '@/layers/PathDetailPopup'
 import MapFeaturePopup from '@/layers/MapFeaturePopup'
 import InstructionPopup from '@/layers/InstructionPopup'
-import React from 'react'
 import { PathDetailsStoreState } from '@/stores/PathDetailsStore'
 import { MapFeatureStoreState } from '@/stores/MapFeatureStore'
 
