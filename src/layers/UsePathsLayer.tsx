@@ -22,7 +22,6 @@ const accessNetworkLayerKey = 'accessNetworkLayer'
 
 export default function usePathsLayer(map: Map, paths: Path[], selectedPath: Path, queryPoints: QueryPoint[]) {
     useEffect(() => {
-        console.log("Paths: ", paths)
         removeCurrentPathLayers(map)
         addUnselectedPathsLayer(
             map,
@@ -60,7 +59,6 @@ function addUnselectedPathsLayer(map: Map, paths: Path[]) {
         opacity: 0.8,
     })
     layer.set(pathsLayerKey, true)
-    console.log("Paths Layer: ", layer)
     layer.setZIndex(1)
     map.addLayer(layer)
 
@@ -122,10 +120,7 @@ function addAccessNetworkLayer(map: Map, selectedPath: Path, queryPoints: QueryP
         source: new VectorSource(),
     })
     layer.setStyle(style)
-    // console.log("query points:", JSON.stringify(queryPoints));
-    // console.log("snapped waypoints:", JSON.stringify(selectedPath.snapped_waypoints.coordinates))
     for (let i = 0; i < selectedPath.snapped_waypoints.coordinates.length; i++) {
-        // console.log(i)
         const start = fromLonLat([queryPoints[i].coordinate.lng, queryPoints[i].coordinate.lat])
         const end = fromLonLat(selectedPath.snapped_waypoints.coordinates[i])
         layer.getSource()?.addFeature(new Feature(createBezierLineString(start, end)))
@@ -145,7 +140,6 @@ function addSelectedPathsLayer(map: Map, selectedPath: Path) {
         }),
     })
     const features = new GeoJSON().readFeatures(createSelectedPath(selectedPath))
-    console.log("Selected Path Layer: ", features)
     const layer = new VectorLayer({
         source: new VectorSource({
             features: features

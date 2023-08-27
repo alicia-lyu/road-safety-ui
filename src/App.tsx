@@ -9,6 +9,7 @@ import {
     getPathDetailsStore,
     getQueryStore,
     getRouteStore,
+    getSafetyFeatureStore,
     getSafetyStore,
     getSettingsStore,
 } from '@/stores/Stores'
@@ -45,6 +46,7 @@ import useAreasLayer from '@/layers/UseAreasLayer'
 import useExternalMVTLayer from '@/layers/UseExternalMVTLayer'
 import useSafetyPathsLayer from './layers/UseSafetyPathsLayer'
 import LocationButton from '@/map/LocationButton'
+import SafeRoutePopups from './map/SafeRoutePopups'
 
 export const POPUP_CONTAINER_ID = 'popup-container'
 export const SIDEBAR_CONTENT_ID = 'sidebar-content'
@@ -59,6 +61,7 @@ export default function App() {
     const [mapOptions, setMapOptions] = useState(getMapOptionsStore().state)
     const [pathDetails, setPathDetails] = useState(getPathDetailsStore().state)
     const [mapFeatures, setMapFeatures] = useState(getMapFeatureStore().state)
+    const [safetyFeatures, setSafetyFeatures] = useState(getSafetyFeatureStore().state)
 
     const map = getMap()
 
@@ -72,6 +75,7 @@ export default function App() {
         const onMapOptionsChanged = () => setMapOptions(getMapOptionsStore().state)
         const onPathDetailsChanged = () => setPathDetails(getPathDetailsStore().state)
         const onMapFeaturesChanged = () => setMapFeatures(getMapFeatureStore().state)
+        const onSafetyFeaturesChanged = () => setSafetyFeatures(getSafetyFeatureStore().state)
 
         getSettingsStore().register(onSettingsChanged)
         getQueryStore().register(onQueryChanged)
@@ -82,6 +86,7 @@ export default function App() {
         getMapOptionsStore().register(onMapOptionsChanged)
         getPathDetailsStore().register(onPathDetailsChanged)
         getMapFeatureStore().register(onMapFeaturesChanged)
+        getSafetyFeatureStore().register(onSafetyFeaturesChanged)
 
         onQueryChanged()
         onInfoChanged()
@@ -91,6 +96,7 @@ export default function App() {
         onMapOptionsChanged()
         onPathDetailsChanged()
         onMapFeaturesChanged()
+        onSafetyFeaturesChanged()
 
         return () => {
             getSettingsStore().register(onSettingsChanged)
@@ -102,6 +108,7 @@ export default function App() {
             getMapOptionsStore().deregister(onMapOptionsChanged)
             getPathDetailsStore().deregister(onPathDetailsChanged)
             getMapFeatureStore().deregister(onMapFeaturesChanged)
+            getSafetyFeatureStore().deregister(onSafetyFeaturesChanged)
         }
     }, [])
 
@@ -124,6 +131,7 @@ export default function App() {
             <div className={styles.appWrapper}>
                 <MapPopups map={map} pathDetails={pathDetails} mapFeatures={mapFeatures} />
                 <ContextMenu map={map} route={route} queryPoints={query.queryPoints} />
+                <SafeRoutePopups map={map}  safetyFeatures={safetyFeatures}/>
                 {isSmallScreen ? (
                     <SmallScreenLayout
                         query={query}

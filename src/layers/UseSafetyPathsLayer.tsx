@@ -15,7 +15,6 @@ const safetyPathsLayerKey = 'safetyPathsLayer'
 // Code related to accessNetworkLayer deleted, might have backlash
 export default function useSafetyPathsLayer(map: Map, paths: PathWithSafety[], selectedPath: Path) {
     useEffect(() => {
-        console.log("Safety Paths", paths)
         removeCurrentSafetyPathsLayers(map)
         addSafetyPathsLayer(
             map,
@@ -46,7 +45,6 @@ function addSafetyPathsLayer(map: Map, paths: PathWithSafety[], selectedPath: Pa
     })
     layer.set(safetyPathsLayerKey, true)
     layer.setZIndex(3)
-    console.log("Safety Paths Layer: ", layer)
     map.addLayer(layer)
     hoverOnFeature(map);
 }
@@ -85,13 +83,11 @@ function createSegments(paths: PathWithSafety[]) {
             const geometry = new LineString(segment.coordinates.map(
                 coordinate => fromLonLat(coordinate)
             ))
-            //console.log(geometry)
             const feature = new Feature({
                 geometry: geometry,
                 safety: segment.index
             })
             //feature.setStyle(createStyleFunction(feature, 100))
-            //console.log(feature)
             segmentFeatures.push(feature)
         })
     })
@@ -100,7 +96,6 @@ function createSegments(paths: PathWithSafety[]) {
 function createStyleFunction(feature: FeatureLike, resolution: number) {
     const safetyScore = feature.getProperties().safety
     const color = `rgba(255, 69, 58, ${(5 - safetyScore) / 5})`
-    // console.log("Color: ", color)
     const style = new Style({
         stroke: new Stroke({
             color: color,

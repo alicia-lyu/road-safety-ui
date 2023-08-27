@@ -3,22 +3,23 @@ import MapPopup from '@/layers/MapPopup'
 import { Map } from 'ol'
 import { Coordinate } from '@/stores/QueryStore'
 
-interface MapFeaturePopupProps {
-    map: Map
-    properties: object
-    coordinate: Coordinate | null
+interface SafetyPopupProps {
+    map: Map,
+    safetyScore: number,
+    explanationProperties: object,
+    coordinate: Coordinate
 }
 
 /**
  * The popup shown when certain map features are hovered. For example a road of the routing graph layer.
  */
-export default function MapFeaturePopup({ map, properties, coordinate }: MapFeaturePopupProps) {
-    console.log('MapFeaturePopup', properties)
+export default function SafetyPopup({ map, safetyScore, explanationProperties, coordinate }: SafetyPopupProps) {
     return (
         <MapPopup map={map} coordinate={coordinate}>
             <div className={styles.popup}>
+                <p>{`Safety Score: ${safetyScore}`}</p>
                 <ul>
-                    {Object.entries(properties).map(([k, v], index) => {
+                    {Object.entries(explanationProperties).map(([k, v], index) => {
                         return <li key={index}>{`${k}=${v}`}</li>
                     })}
                 </ul>
