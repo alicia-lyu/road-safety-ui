@@ -413,7 +413,6 @@ export default class QueryStore extends Store<QueryStoreState> {
             this.api.routeWithDispatch(subRequest.args, i == 0 ? zoom : false)
         })
 
-        // console.log('subRequests to send', subRequests.map(subRequest => subRequest.args.points))
         return subRequests
     }
 
@@ -535,7 +534,6 @@ export default class QueryStore extends Store<QueryStoreState> {
             }
             newQueryPoints.push(point1)
             newQueryPoints.push(middlePoint)
-            // console.log('Generated middle point ' + JSON.stringify(middlePoint.coordinate) + ' between ' + point1.queryText + ' and ' + point2.queryText)
         }
         newQueryPoints.push(queryPoints[queryPoints.length - 1])
         return {
