@@ -74,11 +74,6 @@ export default class SafetyStore extends Store<SafetyStoreState> {
         //  #2: mean 3.5, std 1
         //  #3 and beyond: mean 2.5, std 1
         // Also, have a look at the SafetyStoreState interface
-        /*newPaths.forEach(path => {
-            console.log("path")
-            console.log(path.distance, path.points.coordinates.length)
-            console.log(path.points.coordinates)
-        })*/
         const newState: SafetyStoreState = {
             paths: []
         }
@@ -103,11 +98,6 @@ export default class SafetyStore extends Store<SafetyStoreState> {
         if (newPaths.length > 1) {
             this.addMorePathToState(newPaths, newState)
         }
-        /*for (let path of newState.paths) {
-            console.log("newState:")
-            console.log(path.distance, path.segments.length)
-            console.log(path.segments)
-        }*/
         return newState
         // ALERT: You shouldn't modify the original state object,
         //        but instead create a new one and return it.

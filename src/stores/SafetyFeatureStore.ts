@@ -21,7 +21,6 @@ export default class SafetyFeatureStore extends Store<SafetyFeatureStoreState> {
 
     reduce(state: SafetyFeatureStoreState, action: Action): SafetyFeatureStoreState {
         if (action instanceof SafeRouteRover) {
-            console.log("SafetyFeatureStore: SafeRouteRover", action)
             return {
                 ...state,
                 safetyScore: action.safetyStore,

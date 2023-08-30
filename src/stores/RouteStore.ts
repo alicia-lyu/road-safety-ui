@@ -74,16 +74,13 @@ export default class RouteStore extends Store<RouteStoreState> {
 
     afterReceive(action: Action): void {
         if (action instanceof RouteRequestSuccess) {
-            // console.log("RouteStore.afterReceive", action)
             Dispatcher.dispatch(new RouteStoreLoaded(this.newPaths, this.middlePointAdded))
-            // console.log(this.newPaths)
         } else if (
             action instanceof SetPoint ||
             action instanceof ClearRoute ||
             action instanceof ClearPoints ||
             action instanceof RemovePoint
         ) {
-            // console.log("RouteStore.afterReceive", action)
             Dispatcher.dispatch(new RouteStoreCleared())
         }
     }
@@ -104,7 +101,6 @@ export default class RouteStore extends Store<RouteStoreState> {
     private reduceRouteReceived(state: RouteStoreState, action: RouteRequestSuccess): RouteStoreState {
         const routingResult: RoutingResult = action.result;
         const routingArgs: RoutingArgs = action.request;
-        // console.log("Route received:", routingResult.paths.length, "paths", "with", routingArgs.points.length, "points", "and maxAlternativeRoutes", routingArgs.maxAlternativeRoutes)
         if (this.isStaleRequest(action.request)) {
             console.log("Stale request")
             return state
@@ -180,7 +176,6 @@ export default class RouteStore extends Store<RouteStoreState> {
 
     private isStaleRequest(request: RoutingArgs) {
         const subRequests = this.queryStore.state.currentRequest.subRequests
-        // console.log("Subrequests: ", subRequests.map(subRequest => subRequest.args.points))
         for (const subRequest of subRequests) {
             if (JSONCompare(subRequest.args, request)) {
                 return false

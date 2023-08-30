@@ -9,7 +9,6 @@ interface SafetyPopupProps {
 
 
 export default function SafeRoutePopups({ map, safetyFeatures }: SafetyPopupProps) {
-    console.log('SafetyPopup', safetyFeatures)
     return (
         <>
             <SafetyPopup
