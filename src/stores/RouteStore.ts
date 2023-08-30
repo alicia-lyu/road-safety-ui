@@ -189,6 +189,6 @@ export default class RouteStore extends Store<RouteStoreState> {
     }
 }
 
-function JSONCompare(json1: any, json2: any): boolean {
+export function JSONCompare(json1: any, json2: any): boolean {
     return JSON.stringify(json1) === JSON.stringify(json2)
 }

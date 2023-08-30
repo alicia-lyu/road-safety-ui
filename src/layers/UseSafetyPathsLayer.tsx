@@ -95,7 +95,8 @@ function createSegments(paths: PathWithSafety[]) {
 }
 function createStyleFunction(feature: FeatureLike, resolution: number) {
     const safetyScore = feature.getProperties().safety
-    const color = `rgba(255, 69, 58, ${Math.max((3 - safetyScore) / 2, 0)}`
+    const color = `rgba(255, 69, 58, ${Math.max((4 - safetyScore) / 3, 0)}`
+    // only safetyScore < 4 will show red
     const style = new Style({
         stroke: new Stroke({
             color: color,
