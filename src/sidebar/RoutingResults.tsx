@@ -27,6 +27,8 @@ import SteepIcon from '@/sidebar/routeHints/elevation.svg'
 import BadTrackIcon from '@/sidebar/routeHints/ssid_chart.svg'
 import DangerousIcon from '@/sidebar/routeHints/warn_report.svg'
 import SafeIcon from "@/sidebar/routeHints/safety-icon.svg"
+import FastIcon from "@/sidebar/routeHints/fast.svg"
+import DirectIcon from "@/sidebar/routeHints/route-direct.svg"
 import { Bbox } from '@/api/graphhopper'
 
 export interface RoutingResultsProps {
@@ -45,7 +47,14 @@ export default function RoutingResults(props: RoutingResultsProps) {
     return <ul>{isShortScreen ? createSingletonListContent(props) : createListContent(props)}</ul>
 }
 
-function RoutingResult({ path, isSelected, profile }: { path: Path; isSelected: boolean; profile: string }) {
+function RoutingResult({ path, isSelected, profile, safetyRank, distanceRank, timeRank }: {
+    path: Path;
+    isSelected: boolean;
+    profile: string;
+    safetyRank: number;
+    distanceRank: number;
+    timeRank: number;
+}) {
     const [isExpanded, setExpanded] = useState(false)
     const [selectedRH, setSelectedRH] = useState('')
     const [descriptionRH, setDescriptionRH] = useState('')
@@ -91,6 +100,8 @@ function RoutingResult({ path, isSelected, profile }: { path: Path; isSelected: 
 
     const showDistanceInMiles = useContext(ShowDistanceInMilesContext)
 
+    // console.log(path, "safe", safetyRank, "distance", distanceRank)
+
     return (
         <div className={styles.resultRow}>
             <div className={styles.resultSelectableArea} onClick={() => Dispatcher.dispatch(new SetSelectedPath(path))}>
@@ -135,19 +146,33 @@ function RoutingResult({ path, isSelected, profile }: { path: Path; isSelected: 
                         </PlainButton>
                     )}
                 </div>
-                {path.overallIndex && (
-                    <div className={styles.safety}>
-                        <p>
-                            Safety Score: {path.overallIndex}
-                        </p>
-                        { path.overallIndex > 4 && (
-                            <SafeIcon/>
+                <div className={styles.safety}>
+                    {distanceRank === 1 && (
+                        <>
+                            <p>Direct</p>
+                            <DirectIcon />
+                        </>
+                    )}
+                    { timeRank === 1 && (
+                        <>
+                            <p>Fastest</p>
+                            <FastIcon />
+                        </>
                         )}
-                        { path.overallIndex < 3.5 && (
-                            <DangerousIcon/>
-                        )}
-                    </div>
-                )}
+                    {path.overallIndex && (
+                        <>
+                            <p>
+                                Safety Score: {path.overallIndex}
+                            </p>
+                            {safetyRank === 1 && path.overallIndex > 4 && (
+                                <SafeIcon />
+                            )}
+                            {safetyRank >= 3 && path.overallIndex < 4 && (
+                                <DangerousIcon />
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
             {isSelected && !isExpanded && showHints && (
                 <div className={styles.routeHints}>
@@ -273,14 +298,36 @@ function RoutingResult({ path, isSelected, profile }: { path: Path; isSelected: 
 }
 
 function getSafetyRank(path: Path, paths: Path[]) {
-    paths.sort(compareBySafety)
+    const sortedPaths = paths.slice().sort(compareBySafety)
     let safetyRank = 0
-    paths.forEach((p, i) => {
+    sortedPaths.forEach((p, i) => {
         if (p.pathId === path.pathId) {
-            safetyRank = i + 1
+            safetyRank = sortedPaths.length - i
         }
     })
     return safetyRank
+}
+
+function getDistanceRank(path: Path, paths: Path[]) {
+    const sortedPaths = paths.slice().sort((a, b) => a.distance - b.distance)
+    let distanceRank = 0
+    sortedPaths.forEach((p, i) => {
+        if (p.pathId === path.pathId) {
+            distanceRank = i + 1
+        }
+    })
+    return distanceRank
+}
+
+function getTimeRank(path: Path, paths: Path[]) {
+    const sortedPaths = paths.slice().sort((a, b) => a.time - b.time)
+    let timeRank = 0
+    sortedPaths.forEach((p, i) => {
+        if (p.pathId === path.pathId) {
+            timeRank = i + 1
+        }
+    })
+    return timeRank
 }
 
 function compareBySafety(a: Path, b: Path) {
@@ -500,7 +547,14 @@ function getLength(paths: Path[], subRequests: SubRequest[]) {
 
 function createSingletonListContent(props: RoutingResultsProps) {
     if (props.paths.length > 0)
-        return <RoutingResult path={props.selectedPath} isSelected={true} profile={props.profile} />
+        return <RoutingResult
+            path={props.selectedPath}
+            isSelected={true}
+            profile={props.profile}
+            safetyRank={getSafetyRank(props.selectedPath, props.paths)}
+            distanceRank={getDistanceRank(props.selectedPath, props.paths)}
+            timeRank={getTimeRank(props.selectedPath, props.paths)}
+        />
     if (hasPendingRequests(props.currentRequest.subRequests)) return <RoutingResultPlaceholder key={1} />
     return ''
 }
@@ -512,7 +566,15 @@ function createListContent({ paths, currentRequest, selectedPath, profile }: Rou
     for (let i = 0; i < length; i++) {
         if (i < paths.length)
             result.push(
-                <RoutingResult key={i} path={paths[i]} isSelected={paths[i] === selectedPath} profile={profile} />
+                <RoutingResult
+                    key={i}
+                    path={paths[i]}
+                    isSelected={paths[i].pathId === selectedPath.pathId}
+                    profile={profile}
+                    safetyRank={getSafetyRank(paths[i], paths)}
+                    distanceRank={getDistanceRank(paths[i], paths)}
+                    timeRank={getTimeRank(paths[i], paths)}
+                />
             )
         else result.push(<RoutingResultPlaceholder key={i} />)
     }

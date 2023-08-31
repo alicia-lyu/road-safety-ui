@@ -19,9 +19,20 @@ export interface PathWithSafety extends Path {
     overAllIndex: number
 }
 
+type PathsBufferBlock = {
+    paths: Path[],
+    middlePointAdded: boolean
+}
+
+type PathsBuffer = PathsBufferBlock[]
+
 export default class SafetyStore extends Store<SafetyStoreState> {
     readonly routeStore: RouteStore
 
+    private pathsBuffer: PathsBuffer = []
+    // I added this so that we can generate safety when we have
+    // the safest path at hand, this way most of the route
+    // is safe
     private safestPathFound: boolean = false
     private secondSafestPathFound: boolean = false
 
@@ -62,12 +73,30 @@ export default class SafetyStore extends Store<SafetyStoreState> {
     private addNewPathsWithSafety(state: SafetyStoreState, action: RouteStoreLoaded): SafetyStoreState {
         const newPaths = action.newPaths
         const middlePointAdded = action.middlePointsAdded
+        this.pathsBuffer = [...this.pathsBuffer, { paths: newPaths, middlePointAdded }]
+        this.pathsBuffer.sort(SafetyStore.bufferBlockComparator)
+        if (!middlePointAdded && !this.safestPathFound) {
+            // wait for the safest path to emerge
+            return state
+        }
         const newState = { ...state }
-        newPaths.forEach(path => {
-            const safetyRank = this.getSafetyRank(middlePointAdded)
-            this.addSafePathToState(newState, path, safetyRank)
+        this.pathsBuffer.forEach(bufferBlock => {
+            const middlePointAdded = bufferBlock.middlePointAdded
+            bufferBlock.paths.forEach(path => {
+                const safetyRank = this.getSafetyRank(middlePointAdded)
+                this.addSafePathToState(newState, path, safetyRank)
+            })
         })
         return newState
+    }
+
+    private static bufferBlockComparator(a: PathsBufferBlock, b: PathsBufferBlock): number {
+        if (a.middlePointAdded && !b.middlePointAdded) {
+            return -1
+        } else if (!a.middlePointAdded && b.middlePointAdded) {
+            return 1
+        }
+        return 0
     }
 
     private getSafetyRank(middlePointAdded: boolean): number {
@@ -88,7 +117,7 @@ export default class SafetyStore extends Store<SafetyStoreState> {
         //  #2: mean 4.5, std 0.5
         //  #3 and beyond: mean 4, std 1
         const mean = 5.5 - safetyRank * 0.5;
-        const std = safetyRank === 3 ? 1: 0.5;
+        const std = safetyRank === 3 ? 1 : 0.5;
         const { segments, overAllIndex } = this.generateSegmentsWithSafety(newState, path, mean, std)
         const pathWithSafety: PathWithSafety = {
             ...path,
@@ -111,7 +140,7 @@ export default class SafetyStore extends Store<SafetyStoreState> {
                 return
             }
             const segmentToBeAdded = [coordinatePair, coordinatePairs[index + 1]]
-            const safetyIndex = this.getSegmentsIndex(segmentToBeAdded, state) 
+            const safetyIndex = this.getSegmentsIndex(segmentToBeAdded, state)
                 ?? generateRandomBetweenOneAndFive(mean, std)
             const segmentWithSafety: SegmentWithSafety = {
                 coordinates: segmentToBeAdded,

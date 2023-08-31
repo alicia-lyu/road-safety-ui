@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   data-name="Your Icon"
+   viewBox="0 0 100 125"
+   x="0px"
+   y="0px"
+   height="24"
+   width="30"
+   version="1.1"
+   id="svg18"
+   sodipodi:docname="route-direct.svg"
+   inkscape:version="1.2.2 (b0a84865, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview20"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="9.8333333"
+     inkscape:cx="14.949153"
+     inkscape:cy="12"
+     inkscape:window-width="1309"
+     inkscape:window-height="456"
+     inkscape:window-x="0"
+     inkscape:window-y="38"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg18" />
+  <defs
+     id="defs4">
+    <style
+       id="style2">.cls-1{fill-rule:evenodd;}</style>
+  </defs>
+  <title
+     id="title6">Noun_Project_MASTERFILE_Flat_10px_grid</title>
+  <path
+     class="cls-1"
+     d="m 33.420339,50.924814 a 27.165009,28.350234 0 0 0 -54.330017,0 c 0,15.653964 27.1650081,61.465896 27.1650081,61.465896 0,0 27.1650089,-45.808922 27.1650089,-61.465896 z M -11.892655,50.391976 A 18.147985,18.939791 0 1 1 6.2553301,69.331767 18.149428,18.941296 0 0 1 -11.892655,50.391976 Z"
+     id="path8"
+     style="stroke-width:1.47338" />
+  <path
+     class="cls-1"
+     d="M 81.890445,1.6900848 A 14.653384,15.292719 0 0 0 67.239945,16.99033 c 0,8.445615 14.653384,33.157805 14.653384,33.157805 0,0 14.651942,-24.719716 14.651942,-33.157805 A 14.653384,15.292719 0 0 0 81.890445,1.6900848 Z m 0,25.2224492 a 9.7900757,10.217222 0 1 1 9.790076,-10.223243 9.7900757,10.217222 0 0 1 -9.790076,10.223243 z"
+     id="path10"
+     style="stroke-width:1.47338" />
+  <path
+     class="cls-1"
+     d="m 72.100369,83.078658 a 1.4422622,1.5051888 0 0 0 1.442262,-1.505189 V 58.173803 a 1.4422622,1.5051888 0 0 0 -1.442262,-1.50519 H 49.67896 a 1.4422623,1.505189 0 1 0 0,3.010378 H 68.418273 L 24.469659,105.54511 a 1.4422622,1.5051888 0 1 0 2.039358,2.12834 L 70.658106,61.599613 v 19.973856 a 1.4422622,1.5051888 0 0 0 1.442263,1.505189 z"
+     id="path12"
+     style="stroke-width:1.47338" />
+  <path
+     class="cls-1"
+     d="m 26.441232,114.7388 c 0,-3.27378 -3.731132,-5.98614 -10.240061,-7.43864 a 1.4422622,1.5051888 0 1 0 -0.602866,2.94264 c 5.222431,1.16802 7.955519,3.14585 7.955519,4.496 0,2.22468 -6.739693,5.4548 -17.3071472,5.4548 -10.567455,0 -17.3071458,-3.23012 -17.3071458,-5.4548 0,-1.34112 2.708568,-3.31141 7.8862893,-4.47945 a 1.4422818,1.5052094 0 1 0 -0.6086347,-2.94263 c -6.4570076,1.45702 -10.1621796,4.16185 -10.1621796,7.42208 0,5.55866 10.1549683,8.46518 20.1916708,8.46518 10.0367032,0 20.1945552,-2.90652 20.1945552,-8.46518 z"
+     id="path14"
+     style="stroke-width:1.47338" />
+  <path
+     class="cls-1"
+     d="m 86.385975,48.567687 a 1.4422622,1.5051888 0 0 0 -0.602865,2.942646 6.3185506,6.5942325 0 0 1 2.722991,1.12889 c -0.568251,0.543374 -2.816738,1.514221 -6.615656,1.514221 -3.798919,0 -6.047407,-0.970847 -6.615657,-1.514221 a 6.2478798,6.5204782 0 0 1 2.694145,-1.121365 1.4429868,1.5059451 0 0 0 -0.608634,-2.944149 c -3.26384,0.737542 -5.06234,2.179513 -5.06234,4.064009 0,3.130793 4.817155,4.530619 9.592486,4.530619 4.77533,0 9.591044,-1.399826 9.591044,-4.530619 0,-1.893527 -1.81004,-3.337003 -5.095514,-4.070031 z"
+     id="path16"
+     style="stroke-width:1.47338" />
+</svg>
+<!-- <text x="0" y="115" fill="#000000" font-size="5px" font-weight="bold" font-family="'Helvetica Neue', Helvetica, Arial-Unicode, Arial, Sans-serif">Created by Insticon</text><text x="0" y="120" fill="#000000" font-size="5px" font-weight="bold" font-family="'Helvetica Neue', Helvetica, Arial-Unicode, Arial, Sans-serif">from the Noun Project</text> -->
+
