@@ -77,6 +77,7 @@ export interface BasePath {
     readonly details: Details
     readonly points_order: number[]
     readonly description: string
+    readonly pathId: string
 }
 
 export interface Instruction {

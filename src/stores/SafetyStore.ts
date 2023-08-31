@@ -1,8 +1,7 @@
 import { RouteStoreCleared, RouteStoreLoaded } from "@/actions/Actions";
-import RouteStore, { JSONCompare } from "./RouteStore";
+import RouteStore from "./RouteStore";
 import Store from "./Store";
 import { calcGaussianRandom } from './utils'
-import { v4 as uuidv4 } from 'uuid'
 import { Path } from "@/api/graphhopper";
 import { Action } from "./Dispatcher";
 
@@ -17,8 +16,7 @@ export interface SegmentWithSafety {
 
 export interface PathWithSafety extends Path {
     segments: SegmentWithSafety[],
-    overAllIndex: number,
-    pathId: string
+    overAllIndex: number
 }
 
 export default class SafetyStore extends Store<SafetyStoreState> {
@@ -89,8 +87,7 @@ export default class SafetyStore extends Store<SafetyStoreState> {
         const pathWithSafety: PathWithSafety = {
             ...path,
             segments: segments, // will be updated in the later code
-            overAllIndex: overAllIndex, // will be updated in the later code
-            pathId: uuidv4()
+            overAllIndex: overAllIndex // will be updated in the later code
         };
         newState.paths = [...newState.paths, pathWithSafety];
     }

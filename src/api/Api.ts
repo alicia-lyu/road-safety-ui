@@ -14,9 +14,9 @@ import {
     RoutingResult,
 } from '@/api/graphhopper'
 import { LineString } from 'geojson'
-import { getTranslation, tr, Translation } from '@/translation/Translation'
+import { getTranslation, tr } from '@/translation/Translation'
 import * as config from 'config'
-import { Coordinate } from '@/stores/QueryStore'
+import { v4 as uuidv4 } from 'uuid'
 
 interface ApiProfile {
     name: string
@@ -241,6 +241,7 @@ export class ApiImpl implements Api {
                     ...path,
                     points: ApiImpl.decodePoints(path, is3D),
                     snapped_waypoints: ApiImpl.decodeWaypoints(path, is3D),
+                    pathId: uuidv4()
                 } as Path
             })
             .map((path: Path) => {

@@ -40,6 +40,7 @@ export default class RouteStore extends Store<RouteStoreState> {
             points_order: [],
             time: 0,
             description: '',
+            pathId: '',
         }
     }
 
@@ -99,8 +100,6 @@ export default class RouteStore extends Store<RouteStoreState> {
     }
 
     private reduceRouteReceived(state: RouteStoreState, action: RouteRequestSuccess): RouteStoreState {
-        const routingResult: RoutingResult = action.result;
-        const routingArgs: RoutingArgs = action.request;
         if (this.isStaleRequest(action.request)) {
             console.log("Stale request")
             return state
