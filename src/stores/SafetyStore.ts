@@ -121,7 +121,8 @@ export default class SafetyStore extends Store<SafetyStoreState> {
             indexSum += safetyIndex
         })
 
-        const overAllIndex = indexSum / (coordinatePairs.length - 1);
+        let overAllIndex = indexSum / (coordinatePairs.length - 1);
+        overAllIndex = parseFloat(overAllIndex.toFixed(2))
         return { segments, overAllIndex }
     }
 

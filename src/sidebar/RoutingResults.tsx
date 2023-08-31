@@ -26,6 +26,7 @@ import GetOffBikeIcon from '@/sidebar/routeHints/push_bike.svg'
 import SteepIcon from '@/sidebar/routeHints/elevation.svg'
 import BadTrackIcon from '@/sidebar/routeHints/ssid_chart.svg'
 import DangerousIcon from '@/sidebar/routeHints/warn_report.svg'
+import SafeIcon from "@/sidebar/routeHints/safety-icon.svg"
 import { Bbox } from '@/api/graphhopper'
 
 export interface RoutingResultsProps {
@@ -134,6 +135,19 @@ function RoutingResult({ path, isSelected, profile }: { path: Path; isSelected: 
                         </PlainButton>
                     )}
                 </div>
+                {path.overallIndex && (
+                    <div className={styles.safety}>
+                        <p>
+                            Safety Score: {path.overallIndex}
+                        </p>
+                        { path.overallIndex > 4 && (
+                            <SafeIcon/>
+                        )}
+                        { path.overallIndex < 3.5 && (
+                            <DangerousIcon/>
+                        )}
+                    </div>
+                )}
             </div>
             {isSelected && !isExpanded && showHints && (
                 <div className={styles.routeHints}>
@@ -256,6 +270,25 @@ function RoutingResult({ path, isSelected, profile }: { path: Path; isSelected: 
             {isExpanded && <Instructions instructions={path.instructions} />}
         </div>
     )
+}
+
+function getSafetyRank(path: Path, paths: Path[]) {
+    paths.sort(compareBySafety)
+    let safetyRank = 0
+    paths.forEach((p, i) => {
+        if (p.pathId === path.pathId) {
+            safetyRank = i + 1
+        }
+    })
+    return safetyRank
+}
+
+function compareBySafety(a: Path, b: Path) {
+    if (a.overallIndex !== undefined && b.overallIndex !== undefined) {
+        return a.overallIndex - b.overallIndex
+    } else {
+        return a.distance - b.distance
+    }
 }
 
 function RHButton(p: {
