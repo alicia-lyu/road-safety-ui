@@ -3,6 +3,7 @@ import Dispatcher, { Action } from '@/stores/Dispatcher'
 import { ClearPoints, ClearRoute, RemovePoint, RouteRequestSuccess, RouteStoreCleared, RouteStoreLoaded, SetPoint, SetSelectedPath } from '@/actions/Actions'
 import QueryStore from '@/stores/QueryStore'
 import { Path, RoutingArgs, RoutingResult } from '@/api/graphhopper'
+import { all } from 'ol/events/condition'
 
 export interface RouteStoreState {
     routingResult: RoutingResult
@@ -114,53 +115,44 @@ export default class RouteStore extends Store<RouteStoreState> {
     }
 
     private reduceRouteAgainstSubRequest(state: RouteStoreState, action: RouteRequestSuccess): RouteStoreState {
-        const routingResult: RoutingResult = action.result;
-        const routingArgs: RoutingArgs = action.request;
-        const middlePointAdded = this.getIfMiddlePointAdded(routingArgs);
-        this.middlePointAdded = middlePointAdded;
+        const routingResult: RoutingResult = action.result
+        const routingArgs: RoutingArgs = action.request
+        const middlePointAdded = this.getIfMiddlePointAdded(routingArgs)
+        this.middlePointAdded = middlePointAdded
+        let newPaths: Path[] = routingResult.paths
         if (middlePointAdded) {
-            const restoredPaths: Path[] = [];
-            for (const path of routingResult.paths) {
-                // TO-DO: detect duplicates
-                const restoredSnappedWaypointsCoordinates = path.snapped_waypoints.coordinates.filter((coordinate, i) => i % 2 !== 1);
-                const restoredPath = {
-                    ...path,
-                    snapped_waypoints: {
-                        ...path.snapped_waypoints,
-                        coordinates: restoredSnappedWaypointsCoordinates,
-                    }
-                };
-                restoredPaths.push(restoredPath);
-            }
-            this.newPaths = restoredPaths
-            return {
-                routingResult: {
-                    ...state.routingResult,
-                    paths: [
-                        ...state.routingResult.paths,
-                        ...restoredPaths
-                    ]
-                },
-                selectedPath: state.routingResult.paths[0] ?? restoredPaths[0]
-            }
-            
-        } else {
-            const newPaths = state.routingResult.paths
-            routingResult.paths.forEach(path => {
-                const pathAlreadyExists = newPaths.find(newPath => JSONCompare(newPath, path))
-                if (!pathAlreadyExists) {
-                    newPaths.push(path)
-                }
-            })
-            this.newPaths = newPaths
-            return {
-                routingResult: {
-                    ...state.routingResult,
-                    paths: newPaths
-                },
-                selectedPath: state.routingResult.paths[0] ?? routingResult.paths[0],
-            };
+            newPaths = this.restorePaths(newPaths)
         }
+        newPaths = newPaths.filter((path) => !comparePaths(path, state.routingResult.paths));
+        this.newPaths = newPaths
+        const allPaths = [
+            ...state.routingResult.paths,
+            ...newPaths
+        ]
+        allPaths.sort((a, b) => a.distance - b.distance)
+        return {
+            routingResult: {
+                ...state.routingResult,
+                paths: allPaths
+            },
+            selectedPath: allPaths[0]
+        }
+    }
+
+    private restorePaths(paths: Path[]): Path[] {
+        const restoredPaths: Path[] = [];
+        for (const path of paths) {
+            const restoredSnappedWaypointsCoordinates = path.snapped_waypoints.coordinates.filter((coordinate, i) => i % 2 !== 1);
+            const restoredPath = {
+                ...path,
+                snapped_waypoints: {
+                    ...path.snapped_waypoints,
+                    coordinates: restoredSnappedWaypointsCoordinates,
+                }
+            };
+            restoredPaths.push(restoredPath);
+        }
+        return restoredPaths
     }
 
 
@@ -190,4 +182,13 @@ export default class RouteStore extends Store<RouteStoreState> {
 
 export function JSONCompare(json1: any, json2: any): boolean {
     return JSON.stringify(json1) === JSON.stringify(json2)
+}
+
+export function comparePaths(newPath: Path, paths: Path[]): boolean {
+    for (const path of paths) {
+        if (JSONCompare(newPath.points, path.points)) {
+            return true
+        }
+    }
+    return false
 }

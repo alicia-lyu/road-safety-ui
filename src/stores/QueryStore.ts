@@ -552,9 +552,9 @@ export default class QueryStore extends Store<QueryStoreState> {
      */
     private static calcRandomMiddlePoint(point1: Coordinate, point2: Coordinate): Coordinate {
         const latMean = (point1.lat + point2.lat) / 2
-        const latStdev = Math.abs(point1.lat - point2.lat) / 4
+        const latStdev = Math.abs(point1.lat - point2.lat) / 4 + Math.abs(point1.lng - point2.lng) / 16
         const lngMean = (point1.lng + point2.lng) / 2
-        const lngStdev = Math.abs(point1.lng - point2.lng) / 4
+        const lngStdev = Math.abs(point1.lng - point2.lng) / 4 + Math.abs(point1.lat - point2.lat) / 16
         const gaussianRandomLat = calcGaussianRandom(latMean, latStdev)
         const gaussianRandomLng = calcGaussianRandom(lngMean, lngStdev)
         return {
