@@ -2,6 +2,7 @@ import { Action } from '@/stores/Dispatcher'
 import { Coordinate, QueryPoint } from '@/stores/QueryStore'
 import { ApiInfo, Bbox, Path, RoutingArgs, RoutingProfile, RoutingResult } from '@/api/graphhopper'
 import { PathDetailsPoint } from '@/stores/PathDetailsStore'
+import { PathWithSafety } from '@/stores/SafetyStore'
 
 export class InfoReceived implements Action {
     readonly result: ApiInfo
@@ -273,5 +274,10 @@ export class RouteStoreLoaded implements Action {
     }
 }
 
-
+export class SafetyAdded implements Action {
+    readonly paths: PathWithSafety[]
+    constructor(paths: PathWithSafety[]) {
+        this.paths = paths
+    }
+}
 

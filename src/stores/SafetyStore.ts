@@ -1,9 +1,9 @@
-import { RouteStoreCleared, RouteStoreLoaded } from "@/actions/Actions";
+import { RouteStoreCleared, RouteStoreLoaded, SafetyAdded } from "@/actions/Actions";
 import RouteStore from "./RouteStore";
 import Store from "./Store";
 import { calcGaussianRandom } from './utils'
 import { Path } from "@/api/graphhopper";
-import { Action } from "./Dispatcher";
+import Dispatcher, { Action } from "./Dispatcher";
 
 export interface SafetyStoreState {
     paths: PathWithSafety[]
@@ -45,6 +45,12 @@ export default class SafetyStore extends Store<SafetyStoreState> {
             return this.addNewPathsWithSafety(state, action)
         } else {
             return state;
+        }
+    }
+
+    afterReceive(action: Action): void {
+        if (action instanceof RouteStoreLoaded) {
+            Dispatcher.dispatch(new SafetyAdded(this.state.paths))
         }
     }
 

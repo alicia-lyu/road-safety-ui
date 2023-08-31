@@ -1,9 +1,9 @@
 import Store from '@/stores/Store'
 import Dispatcher, { Action } from '@/stores/Dispatcher'
-import { ClearPoints, ClearRoute, RemovePoint, RouteRequestSuccess, RouteStoreCleared, RouteStoreLoaded, SetPoint, SetSelectedPath } from '@/actions/Actions'
+import { ClearPoints, ClearRoute, RemovePoint, RouteRequestSuccess, RouteStoreCleared, RouteStoreLoaded, SafetyAdded, SetPoint, SetSelectedPath, ToggleSafeRoutingEnabled } from '@/actions/Actions'
 import QueryStore from '@/stores/QueryStore'
 import { Path, RoutingArgs, RoutingResult } from '@/api/graphhopper'
-import { all } from 'ol/events/condition'
+import { PathWithSafety } from './SafetyStore'
 
 export interface RouteStoreState {
     routingResult: RoutingResult
@@ -67,9 +67,12 @@ export default class RouteStore extends Store<RouteStoreState> {
             action instanceof SetPoint ||
             action instanceof ClearRoute ||
             action instanceof ClearPoints ||
-            action instanceof RemovePoint
+            action instanceof RemovePoint ||
+            action instanceof ToggleSafeRoutingEnabled
         ) {
             return RouteStore.getInitialState()
+        } else if (action instanceof SafetyAdded) {
+            return this.addSafety(state, action)
         }
         return state
     }
@@ -81,7 +84,8 @@ export default class RouteStore extends Store<RouteStoreState> {
             action instanceof SetPoint ||
             action instanceof ClearRoute ||
             action instanceof ClearPoints ||
-            action instanceof RemovePoint
+            action instanceof RemovePoint ||
+            action instanceof ToggleSafeRoutingEnabled
         ) {
             Dispatcher.dispatch(new RouteStoreCleared())
         }
@@ -163,6 +167,27 @@ export default class RouteStore extends Store<RouteStoreState> {
             return subRequest.middlePointsAdded ?? false
         }
         return false
+    }
+
+    private addSafety(state: RouteStoreState, action: SafetyAdded): RouteStoreState {
+        return {
+            routingResult: {
+                ...state.routingResult,
+                paths: state.routingResult.paths.map(path => this.addSafetyToPath(path, action.paths))
+            },
+            selectedPath: this.addSafetyToPath(state.selectedPath, action.paths)
+        }
+    }
+
+    private addSafetyToPath(path: Path, pathsWithSafety: PathWithSafety[]) {
+        const pathWithSafety = pathsWithSafety.find(pathWithSafety => pathWithSafety.pathId === path.pathId)
+        if (pathWithSafety) {
+            return {
+                ...path,
+                overallIndex: pathWithSafety.overAllIndex,
+            }
+        }
+        return path
     }
 
     private isStaleRequest(request: RoutingArgs) {

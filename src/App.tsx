@@ -47,6 +47,7 @@ import useExternalMVTLayer from '@/layers/UseExternalMVTLayer'
 import useSafetyPathsLayer from './layers/UseSafetyPathsLayer'
 import LocationButton from '@/map/LocationButton'
 import SafeRoutePopups from './map/SafeRoutePopups'
+import { PathWithSafety } from './stores/SafetyStore'
 
 export const POPUP_CONTAINER_ID = 'popup-container'
 export const SIDEBAR_CONTENT_ID = 'sidebar-content'

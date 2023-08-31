@@ -59,6 +59,7 @@ export interface RoutingProfile {
 export interface Path extends BasePath {
     readonly points: LineString
     readonly snapped_waypoints: LineString
+    overallIndex?: number
 }
 
 export interface RawPath extends BasePath {
