@@ -16,6 +16,7 @@ export default function SafeRoutePopups({ map, safetyFeatures }: SafetyPopupProp
                 safetyScore={safetyFeatures.safetyScore}
                 explanationProperties={safetyFeatures.explanationProperties}
                 coordinate={safetyFeatures.coordinate}
+                level={safetyFeatures.safeRoutingLevel}
             />
         </>
     )

@@ -1,4 +1,4 @@
-import { ToggleDistanceUnits, ToggleSafeRoutingEnabled } from '@/actions/Actions'
+import { SafeRoutingLevelChanged, ToggleDistanceUnits, ToggleSafeRoutingEnabled } from '@/actions/Actions'
 import Dispatcher from '@/stores/Dispatcher'
 import styles from '@/sidebar/SettingsBox.module.css'
 import { tr } from '@/translation/Translation'
@@ -8,9 +8,21 @@ import OffIcon from '@/sidebar/toggle_off.svg'
 import { useContext, useState } from 'react'
 import { ShowDistanceInMilesContext } from '@/ShowDistanceInMilesContext'
 
+type SafeRoutingLevels = 1 | 2 | 3
+
 export default function SettingsBox() {
     const showDistanceInMiles = useContext(ShowDistanceInMilesContext)
     const [safeRoutingEnabled, setSafeRouting] = useState(true);
+    const [safeRoutingLevel, setSafeRoutingLevel] = useState<SafeRoutingLevels>(2);
+
+    function handleSafeRoutingLevelChange(event: React.ChangeEvent<HTMLInputElement>) {
+        const levelNum = parseInt(event.target.value);
+        if ([1, 2, 3].includes(levelNum)) {
+            const level = levelNum as SafeRoutingLevels
+            setSafeRoutingLevel(level);
+            Dispatcher.dispatch(new SafeRoutingLevelChanged(level));
+        }
+    }
 
     return (
         <div className={styles.parent}>
@@ -39,6 +51,15 @@ export default function SettingsBox() {
                 <div style={{ color: safeRoutingEnabled ? '#5b616a' : 'gray' }}>
                     {tr(safeRoutingEnabled ? 'Safe Routing Mode Enabled' : 'Safe Routing Mode Disabled')}
                 </div>
+                {safeRoutingEnabled && (
+                    <>
+                        <input type='range' min={1} max={3} step={1}
+                            value={safeRoutingLevel} onChange={handleSafeRoutingLevelChange}
+                            className={styles.safeRoutingLevel}
+                        />
+                        <div style={{ color: safeRoutingEnabled ? '#5b616a' : 'gray' }}>Safety routing level: {safeRoutingLevel}</div>
+                    </>
+                )}
             </div>
             <div className={styles.infoLine}>
                 <a href="https://www.graphhopper.com/maps-route-planner/">Info</a>

@@ -20,6 +20,9 @@ export default function MapPopup({ map, coordinate, children }: MapPopupProps) {
         })
         setOverlay(overlay)
         map.addOverlay(overlay)
+        return () => {
+            map.removeOverlay(overlay)
+        }
     }, [map])
 
     useEffect(() => {

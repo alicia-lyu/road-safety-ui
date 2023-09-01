@@ -281,3 +281,10 @@ export class SafetyAdded implements Action {
     }
 }
 
+export class SafeRoutingLevelChanged implements Action {
+    readonly level: 1 | 2 | 3
+    constructor(level: 1 | 2 | 3) {
+        this.level = level
+    }
+}
+
