@@ -298,36 +298,26 @@ function RoutingResult({ path, isSelected, profile, safetyRank, distanceRank, ti
 }
 
 function getSafetyRank(path: Path, paths: Path[]) {
-    const sortedPaths = paths.slice().sort(compareBySafety)
-    let safetyRank = 0
-    sortedPaths.forEach((p, i) => {
-        if (p.pathId === path.pathId) {
-            safetyRank = sortedPaths.length - i
-        }
-    })
-    return safetyRank
+    if (path.overallIndex === undefined) {
+        return 0
+    } else {
+        const rankedSafety = paths.map(p => p.overallIndex).filter(Boolean) as number[];
+        rankedSafety.sort((a, b) => b - a)
+        const rank = rankedSafety.findIndex(s => Math.abs(s - path.overallIndex!) < 0.02) + 1;
+        return rank
+    }
 }
 
 function getDistanceRank(path: Path, paths: Path[]) {
     const sortedPaths = paths.slice().sort((a, b) => a.distance - b.distance)
-    let distanceRank = 0
-    sortedPaths.forEach((p, i) => {
-        if (p.pathId === path.pathId) {
-            distanceRank = i + 1
-        }
-    })
-    return distanceRank
+    const rank = sortedPaths.findIndex(p => p.pathId === path.pathId) + 1
+    return rank
 }
 
 function getTimeRank(path: Path, paths: Path[]) {
     const sortedPaths = paths.slice().sort((a, b) => a.time - b.time)
-    let timeRank = 0
-    sortedPaths.forEach((p, i) => {
-        if (p.pathId === path.pathId) {
-            timeRank = i + 1
-        }
-    })
-    return timeRank
+    const rank = sortedPaths.findIndex(p => p.pathId === path.pathId) + 1
+    return rank
 }
 
 function compareBySafety(a: Path, b: Path) {
