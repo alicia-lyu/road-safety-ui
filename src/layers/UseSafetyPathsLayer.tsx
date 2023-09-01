@@ -111,9 +111,8 @@ function createStyleFunction(feature: FeatureLike, resolution: number) {
 function generateExplanation(safetyScore: number): object {
     const accidentsPastYear = Math.floor((5 - safetyScore) * 3);
     const dangerousFactors = [
-        'Slippery Road', 'Potholes', 'Uneven Road', 
-        'Heavy Traffic', 'Moderate Traffic', 'Light Traffic', 
-        'Rainy Weather', 'Foggy Weather', 'Clear Weather'
+        'Slippery Road', 'Potholes', 'Uneven Road', 'Roadworks', 'Road Narrowing', 'Heavy Traffic',
+        'Rainy Weather', 'Foggy Weather', 'Snowy Weather', 'Icy Weather'
     ];
     const selectedFactors = [];
     const numberOfFactors = 5 - safetyScore; // Select more factors for lower safety scores

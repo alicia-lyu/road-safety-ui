@@ -78,16 +78,18 @@ export default class RouteStore extends Store<RouteStoreState> {
     }
 
     afterReceive(action: Action): void {
-        if (action instanceof RouteRequestSuccess) {
-            Dispatcher.dispatch(new RouteStoreLoaded(this.newPaths, this.middlePointAdded))
-        } else if (
-            action instanceof SetPoint ||
-            action instanceof ClearRoute ||
-            action instanceof ClearPoints ||
-            action instanceof RemovePoint ||
-            action instanceof ToggleSafeRoutingEnabled
-        ) {
-            Dispatcher.dispatch(new RouteStoreCleared())
+        if (this.queryStore.state.safeRoutingEnabled) {
+            if (action instanceof RouteRequestSuccess) {
+                Dispatcher.dispatch(new RouteStoreLoaded(this.newPaths, this.middlePointAdded))
+            } else if (
+                action instanceof SetPoint ||
+                action instanceof ClearRoute ||
+                action instanceof ClearPoints ||
+                action instanceof RemovePoint ||
+                action instanceof ToggleSafeRoutingEnabled
+            ) {
+                Dispatcher.dispatch(new RouteStoreCleared())
+            }
         }
     }
 
@@ -113,6 +115,8 @@ export default class RouteStore extends Store<RouteStoreState> {
             if (this.queryStore.state.safeRoutingEnabled) {
                 const stateWithNewPaths = this.reduceRouteAgainstSubRequest(state, action)
                 return stateWithNewPaths
+            } else {
+                return this.addNewPathsToState(state, action.result.paths)
             }
         }
         return state
@@ -127,6 +131,10 @@ export default class RouteStore extends Store<RouteStoreState> {
         if (middlePointAdded) {
             newPaths = this.restorePaths(newPaths)
         }
+        return this.addNewPathsToState(state, newPaths)
+    }
+
+    private addNewPathsToState(state: RouteStoreState, newPaths: Path[]): RouteStoreState {
         newPaths = newPaths.filter((path) => !comparePaths(path, state.routingResult.paths));
         this.newPaths = newPaths
         const allPaths = [
