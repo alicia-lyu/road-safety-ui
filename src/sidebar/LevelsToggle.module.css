@@ -1,0 +1,14 @@
+.levelsToggle {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: baseline;
+    height: 2em;
+    margin-left: 1em;
+}
+
+.levelsToggle > * {
+    height: 100%;
+    min-width: 1em;
+    margin-right: 1em;
+}
