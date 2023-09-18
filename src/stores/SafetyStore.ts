@@ -151,7 +151,7 @@ export default class SafetyStore extends Store<SafetyStoreState> {
         })
 
         let overAllIndex = indexSum / (coordinatePairs.length - 1);
-        overAllIndex = parseFloat(overAllIndex.toFixed(2))
+        overAllIndex = parseFloat(overAllIndex.toFixed(1))
         return { segments, overAllIndex }
     }
 
@@ -175,7 +175,7 @@ function generateRandomBetweenOneAndFive(mean: number, std: number): number {
     } else if (gaussianRandom < 1) {
         return 1
     }
-    const roundedGaussianRandom = parseFloat(gaussianRandom.toFixed(2))
+    const roundedGaussianRandom = parseFloat(gaussianRandom.toFixed(1))
     return roundedGaussianRandom
 }
 

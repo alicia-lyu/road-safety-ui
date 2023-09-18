@@ -125,7 +125,7 @@ function generateExplanation(safetyScore: number): object {
     }
 
     return {
-        'Confidence': `${Math.floor(confidence * 100)}%`,
+        'Confidence': `${Math.floor(90 + confidence * 10)}%`,
         'Accidents in the past year': accidentsPastYear,
         'Dangerous factors': selectedFactors,
     }

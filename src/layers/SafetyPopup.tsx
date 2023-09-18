@@ -26,6 +26,9 @@ export default function SafetyPopup({ map, safetyScore, explanationProperties, c
                                 {v.map((v, index) => <li key={index}>{v}</li>)}
                             </ul>
                         </li>
+                    } else if (k === "Confidence") {
+                        return <></>
+                        // Not showing confidence as a factor for now
                     } else {
                         return <li key={index}>{`${k}: ${v}`}</li>
                     }
