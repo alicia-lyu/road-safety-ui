@@ -116,7 +116,7 @@ function generateExplanation(safetyScore: number): object {
     ];
     const selectedFactors = [];
     const numberOfFactors = 5 - safetyScore; // Select more factors for lower safety scores
-    const confidence = Math.random();
+    const confidence = 0.7 + Math.random() * 0.25;
 
     for (let i = 0; i < numberOfFactors; i++) {
         const randomIndex = Math.floor(Math.random() * dangerousFactors.length);
@@ -125,7 +125,7 @@ function generateExplanation(safetyScore: number): object {
     }
 
     return {
-        'Confidence': `${Math.floor(90 + confidence * 10)}%`,
+        'Confidence': `${Math.floor(confidence * 100)}%`,
         'Accidents in the past year': accidentsPastYear,
         'Dangerous factors': selectedFactors,
     }

@@ -162,7 +162,7 @@ function RoutingResult({ path, isSelected, profile, safetyRank, distanceRank, ti
                     {path.overallIndex && (
                         <>
                             <p>
-                                Safety Score: {path.overallIndex}
+                                Safety Score: {path.overallIndex} / 5.0
                             </p>
                             {safetyRank === 1 && path.overallIndex > 4 && (
                                 <SafeIcon />
