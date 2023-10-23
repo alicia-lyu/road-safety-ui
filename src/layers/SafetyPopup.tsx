@@ -17,7 +17,7 @@ interface SafetyPopupProps {
 export default function SafetyPopup({ map, safetyScore, explanationProperties, coordinate, level }: SafetyPopupProps) {
     return <MapPopup map={map} coordinate={coordinate}>
         <div className={styles.popup} style={{ display: level === 1 ? "none" : "block" }}>
-            <p>{`Safety Score: ${safetyScore}`}</p>
+            <p>{`Safety Score: ${safetyScore}`} / 5.0</p>
             {level === 3 && <ul className={styles.explanation}>
                 {Object.entries(explanationProperties).map(([k, v], index) => {
                     if (v instanceof Array) {
@@ -27,7 +27,7 @@ export default function SafetyPopup({ map, safetyScore, explanationProperties, c
                             </ul>
                         </li>
                     } else if (k === "Confidence") {
-                        return <li>Prediction Confidence: {v}</li>
+                        return <li key={index}>Prediction Confidence: {v}</li>
                         // Showing confidence as a factor for now
                     } else {
                         return <li key={index}>{`${k}: ${v}`}</li>

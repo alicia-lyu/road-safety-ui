@@ -24,6 +24,7 @@ import { calcDist } from '@/distUtils'
 import config from 'config'
 import { customModel2prettyString, customModelExamples } from '@/sidebar/CustomModelExamples'
 import { calcGaussianRandom } from './utils'
+import middlePoints, { PointOfInterest } from './middlePoints'
 
 export interface Coordinate {
     lat: number
@@ -44,6 +45,8 @@ export interface QueryStoreState {
     readonly customModelEnabled: boolean
     readonly customModelStr: string
     readonly safeRoutingEnabled: boolean
+    readonly participantId: number
+    readonly middlePointsToChooseFrom: PointOfInterest[]
 }
 
 export interface QueryPoint {
@@ -117,7 +120,9 @@ export default class QueryStore extends Store<QueryStoreState> {
             },
             customModelEnabled: customModelEnabledInitially,
             customModelStr: initialCustomModelStr,
-            safeRoutingEnabled: true
+            safeRoutingEnabled: true,
+            participantId: 0,
+            middlePointsToChooseFrom: middlePoints[0]
         }
     }
 
@@ -379,7 +384,6 @@ export default class QueryStore extends Store<QueryStoreState> {
                     const secondRequest = QueryStore.buildRouteRequest(state)
                     requests.push(secondRequest)
                 }
-                    
 
                 // then 3 more slower request including alternatives (max. 4 in total)
                 // with different middle points
@@ -524,10 +528,11 @@ export default class QueryStore extends Store<QueryStoreState> {
         for (let i = 0; i < queryPoints.length - 1; i++) {
             const point1 = queryPoints[i]
             const point2 = queryPoints[i + 1]
+            const middlePointChosen = QueryStore.chooseMiddlePoint(point1.coordinate, point2.coordinate, state)
             const middlePoint = {
                 isInitialized: true,
-                queryText: 'Middile Point ' + i + 1,
-                coordinate: QueryStore.calcRandomMiddlePoint(point1.coordinate, point2.coordinate),
+                queryText: middlePointChosen.queryText,
+                coordinate: middlePointChosen.coordinate,
                 id: state.nextQueryPointId,
                 color: QueryStore.getMarkerColor(QueryPointType.Via),
                 type: QueryPointType.Via,
@@ -562,6 +567,26 @@ export default class QueryStore extends Store<QueryStoreState> {
             lng: gaussianRandomLng,
         }
     }
+
+    private static chooseMiddlePoint(point1: Coordinate, point2: Coordinate, state: QueryStoreState) {
+        const mid: Coordinate = {
+            lat: (point1.lat + point2.lat) / 2,
+            lng: (point1.lng + point2.lng) / 2,
+        }
+
+        let result = state.middlePointsToChooseFrom[0];
+        for (const middlePoint of state.middlePointsToChooseFrom) {
+            if (
+                calcDistance(mid, middlePoint.coordinate) < calcDistance(mid, result.coordinate)
+                && !isMiddlePointChosen(middlePoint, state.currentRequest.subRequests)
+            ) {
+                result = middlePoint
+            }
+        }
+        console.log("Middle point chosen: ", result.queryText)
+
+        return result;
+    }
 }
 
 function replace<T>(array: T[], compare: { (element: T): boolean }, provider: { (element: T): T }) {
@@ -582,4 +607,21 @@ function getMaxDistance(queryPoints: QueryPoint[]): number {
         max = Math.max(dist, max)
     }
     return max
+}
+
+function calcDistance(point1: Coordinate, point2: Coordinate) {
+    return (point1.lat - point2.lat) ** 2 + (point1.lng - point2.lng) ** 2
+}
+
+function isMiddlePointChosen(middlePoint: PointOfInterest, subRequests: SubRequest[]) {
+    for (const subRequest of subRequests) {
+        for (const point of subRequest.args.points) {
+            if (isTheSamePoint({lat: point[0], lng: point[1]}, middlePoint.coordinate)) return true
+        }
+    }
+    return false;
+}
+
+function isTheSamePoint(point1: Coordinate, point2: Coordinate) {
+    return Math.abs(point1.lat - point2.lat) < 0.0001 && Math.abs(point1.lng - point2.lng) < 0.0001
 }
