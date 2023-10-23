@@ -46,7 +46,6 @@ export interface QueryStoreState {
     readonly customModelStr: string
     readonly safeRoutingEnabled: boolean
     readonly participantId: number
-    readonly middlePointsToChooseFrom: PointOfInterest[]
 }
 
 export interface QueryPoint {
@@ -121,8 +120,7 @@ export default class QueryStore extends Store<QueryStoreState> {
             customModelEnabled: customModelEnabledInitially,
             customModelStr: initialCustomModelStr,
             safeRoutingEnabled: true,
-            participantId: 0,
-            middlePointsToChooseFrom: middlePoints[0]
+            participantId: 0
         }
     }
 
@@ -387,15 +385,31 @@ export default class QueryStore extends Store<QueryStoreState> {
 
                 // then 3 more slower request including alternatives (max. 4 in total)
                 // with different middle points
-                for (let i = 0; i < 3; i++) {
-                    const newRequest = QueryStore.buildRouteRequest(QueryStore.generateMiddlePoints({
-                        ...state,
-                        maxAlternativeRoutes: 1,
-                    }))
-                    requests.push(newRequest)
+                // if there are only 2 points set
+                if (state.queryPoints.length === 2) {
+                    const middlePointsChosen = QueryStore.chooseMiddlePoints(
+                        state.queryPoints[0].coordinate,
+                        state.queryPoints[1].coordinate,
+                        state
+                    )
+                    for (const middlePoint of middlePointsChosen) {
+                        const middlePointRequest = QueryStore.buildRouteRequest({
+                            ...state,
+                            queryPoints: [
+                                state.queryPoints[0],
+                                {
+                                    ...state.queryPoints[1],
+                                    coordinate: middlePoint.coordinate,
+                                    queryText: middlePoint.queryText,
+                                },
+                                state.queryPoints[1]
+                            ],
+                        })
+                        requests.push(middlePointRequest)
+                    }
                 }
             }
-            
+
             return {
                 ...state,
                 currentRequest: { subRequests: this.send(requests, zoom) },
@@ -517,75 +531,19 @@ export default class QueryStore extends Store<QueryStoreState> {
         }
     }
 
-    /**
-     * Generate middle points between each pair of existing points
-     * @param state must have 2 or more valid points (not empty)
-     * @returns a new state with the generated points added
-     */
-    private static generateMiddlePoints(state: QueryStoreState): QueryStoreState {
-        const queryPoints: QueryPoint[] = state.queryPoints
-        const newQueryPoints: QueryPoint[] = []
-        for (let i = 0; i < queryPoints.length - 1; i++) {
-            const point1 = queryPoints[i]
-            const point2 = queryPoints[i + 1]
-            const middlePointChosen = QueryStore.chooseMiddlePoint(point1.coordinate, point2.coordinate, state)
-            const middlePoint = {
-                isInitialized: true,
-                queryText: middlePointChosen.queryText,
-                coordinate: middlePointChosen.coordinate,
-                id: state.nextQueryPointId,
-                color: QueryStore.getMarkerColor(QueryPointType.Via),
-                type: QueryPointType.Via,
-            }
-            newQueryPoints.push(point1)
-            newQueryPoints.push(middlePoint)
-        }
-        newQueryPoints.push(queryPoints[queryPoints.length - 1])
-        return {
-            ...state,
-            queryPoints: newQueryPoints,
-            nextQueryPointId: state.nextQueryPointId + 1,
-        }
-    }
-
-    /**
-     * Calculate a random point between @param point1 and @param point2
-     * @param point1 must be a valid point
-     * @param point2 must be a valid point
-     * @returns a random point whose longitude and latitude forms a normal distribution, 
-     * whose +- 2 stdev falls between @param point1 and @param point2
-     */
-    private static calcRandomMiddlePoint(point1: Coordinate, point2: Coordinate): Coordinate {
-        const latMean = (point1.lat + point2.lat) / 2
-        const latStdev = Math.abs(point1.lat - point2.lat) / 4 + Math.abs(point1.lng - point2.lng) / 16
-        const lngMean = (point1.lng + point2.lng) / 2
-        const lngStdev = Math.abs(point1.lng - point2.lng) / 4 + Math.abs(point1.lat - point2.lat) / 16
-        const gaussianRandomLat = calcGaussianRandom(latMean, latStdev)
-        const gaussianRandomLng = calcGaussianRandom(lngMean, lngStdev)
-        return {
-            lat: gaussianRandomLat,
-            lng: gaussianRandomLng,
-        }
-    }
-
-    private static chooseMiddlePoint(point1: Coordinate, point2: Coordinate, state: QueryStoreState) {
+    private static chooseMiddlePoints(point1: Coordinate, point2: Coordinate, state: QueryStoreState) {
         const mid: Coordinate = {
             lat: (point1.lat + point2.lat) / 2,
             lng: (point1.lng + point2.lng) / 2,
         }
 
-        let result = state.middlePointsToChooseFrom[0];
-        for (const middlePoint of state.middlePointsToChooseFrom) {
-            if (
-                calcDistance(mid, middlePoint.coordinate) < calcDistance(mid, result.coordinate)
-                && !isMiddlePointChosen(middlePoint, state.currentRequest.subRequests)
-            ) {
-                result = middlePoint
-            }
-        }
-        console.log("Middle point chosen: ", result.queryText)
+        const middlePointsSorted = middlePoints[state.participantId].slice();
+        middlePointsSorted.sort((middlePoint1, middlePoint2) => {
+            return calcDistance(mid, middlePoint1.coordinate) - calcDistance(mid, middlePoint2.coordinate)
+        })
 
-        return result;
+        console.log(middlePointsSorted);
+        return middlePointsSorted.slice(0, 3);
     }
 }
 
@@ -616,7 +574,7 @@ function calcDistance(point1: Coordinate, point2: Coordinate) {
 function isMiddlePointChosen(middlePoint: PointOfInterest, subRequests: SubRequest[]) {
     for (const subRequest of subRequests) {
         for (const point of subRequest.args.points) {
-            if (isTheSamePoint({lat: point[0], lng: point[1]}, middlePoint.coordinate)) return true
+            if (isTheSamePoint({ lat: point[0], lng: point[1] }, middlePoint.coordinate)) return true
         }
     }
     return false;
