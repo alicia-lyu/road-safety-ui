@@ -1,4 +1,4 @@
-import { RouteStoreCleared, RouteStoreLoaded, SafetyAdded } from "@/actions/Actions";
+import { RouteRequestSuccess, RouteStoreCleared, RouteStoreLoaded, SafetyAdded } from "@/actions/Actions";
 import RouteStore from "./RouteStore";
 import Store from "./Store";
 import { calcGaussianRandom } from './utils'
@@ -19,22 +19,8 @@ export interface PathWithSafety extends Path {
     overAllIndex: number
 }
 
-type PathsBufferBlock = {
-    paths: Path[],
-    middlePointAdded: boolean
-}
-
-type PathsBuffer = PathsBufferBlock[]
-
 export default class SafetyStore extends Store<SafetyStoreState> {
     readonly routeStore: RouteStore
-
-    private pathsBuffer: PathsBuffer = []
-    // I added this so that we can generate safety when we have
-    // the safest path at hand, this way most of the route
-    // is safe
-    private safestPathFound: boolean = false
-    private secondSafestPathFound: boolean = false
 
     constructor(routeStore: RouteStore) {
         super(SafetyStore.getInitialState())
@@ -49,18 +35,16 @@ export default class SafetyStore extends Store<SafetyStoreState> {
 
     reduce(state: SafetyStoreState, action: Action): SafetyStoreState {
         if (action instanceof RouteStoreCleared) {
-            this.safestPathFound = false
-            this.secondSafestPathFound = false
             return SafetyStore.getInitialState()
-        } else if (action instanceof RouteStoreLoaded) {
-            return this.addNewPathsWithSafety(state, action)
+        } else if (action instanceof RouteRequestSuccess) {
+            return this.addPathsWithSafety(state, action)
         } else {
             return state;
         }
     }
 
     afterReceive(action: Action): void {
-        if (action instanceof RouteStoreLoaded) {
+        if (action instanceof RouteRequestSuccess) {
             Dispatcher.dispatch(new SafetyAdded(this.state.paths))
         }
     }
@@ -70,46 +54,18 @@ export default class SafetyStore extends Store<SafetyStoreState> {
      * while reserving safety index for paths already in route store.
      * @returns the new state of SafetyStore
      */
-    private addNewPathsWithSafety(state: SafetyStoreState, action: RouteStoreLoaded): SafetyStoreState {
-        const newPaths = action.newPaths
-        const middlePointAdded = action.middlePointsAdded
-        this.pathsBuffer = [...this.pathsBuffer, { paths: newPaths, middlePointAdded }]
-        this.pathsBuffer.sort(SafetyStore.bufferBlockComparator)
-        if (!middlePointAdded && !this.safestPathFound) {
-            // wait for the safest path to emerge
-            return state
-        }
+    private addPathsWithSafety(state: SafetyStoreState, action: RouteRequestSuccess): SafetyStoreState {
+        const paths: Path[] = [...action.result.paths]
         const newState = { ...state }
-        this.pathsBuffer.forEach(bufferBlock => {
-            const middlePointAdded = bufferBlock.middlePointAdded
-            bufferBlock.paths.forEach(path => {
-                const safetyRank = this.getSafetyRank(middlePointAdded)
-                this.addSafePathToState(newState, path, safetyRank)
-            })
+
+        // The more the distance, the higher the safety rank
+        paths.sort((p1, p2) => p2.distance - p1.distance)
+
+        paths.forEach((path, index) => {
+            this.addSafePathToState(newState, path, index + 1)
         })
+        
         return newState
-    }
-
-    private static bufferBlockComparator(a: PathsBufferBlock, b: PathsBufferBlock): number {
-        if (a.middlePointAdded && !b.middlePointAdded) {
-            return -1
-        } else if (!a.middlePointAdded && b.middlePointAdded) {
-            return 1
-        }
-        return 0
-    }
-
-    private getSafetyRank(middlePointAdded: boolean): number {
-        //  #1 safest path: the first member in the first set of paths which has middlePoints added.
-        //  #2 safest path: the first member in the first set of paths which has middlePoints added.
-        if (!this.safestPathFound && middlePointAdded) {
-            this.safestPathFound = true
-            return 1
-        } else if (!this.secondSafestPathFound && middlePointAdded) {
-            this.secondSafestPathFound = true
-            return 2
-        }
-        return 3
     }
 
     private addSafePathToState(newState: SafetyStoreState, path: Path, safetyRank: number): void {

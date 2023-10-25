@@ -79,9 +79,7 @@ export default class RouteStore extends Store<RouteStoreState> {
 
     afterReceive(action: Action): void {
         if (this.queryStore.state.safeRoutingEnabled) {
-            if (action instanceof RouteRequestSuccess) {
-                Dispatcher.dispatch(new RouteStoreLoaded(this.newPaths, this.middlePointAdded))
-            } else if (
+            if (
                 action instanceof SetPoint ||
                 action instanceof ClearRoute ||
                 action instanceof ClearPoints ||
