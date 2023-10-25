@@ -570,16 +570,3 @@ function getMaxDistance(queryPoints: QueryPoint[]): number {
 function calcDistance(point1: Coordinate, point2: Coordinate) {
     return (point1.lat - point2.lat) ** 2 + (point1.lng - point2.lng) ** 2
 }
-
-function isMiddlePointChosen(middlePoint: PointOfInterest, subRequests: SubRequest[]) {
-    for (const subRequest of subRequests) {
-        for (const point of subRequest.args.points) {
-            if (isTheSamePoint({ lat: point[0], lng: point[1] }, middlePoint.coordinate)) return true
-        }
-    }
-    return false;
-}
-
-function isTheSamePoint(point1: Coordinate, point2: Coordinate) {
-    return Math.abs(point1.lat - point2.lat) < 0.0001 && Math.abs(point1.lng - point2.lng) < 0.0001
-}
