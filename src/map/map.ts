@@ -33,11 +33,10 @@ export function createMap(): Map {
     map.once('postrender', () => {
         Dispatcher.dispatch(new MapIsLoaded())
     })
-    centerMap(map)
     return map
 }
 
-async function centerMap(map: Map) {
+export async function reCenterMap(map: Map) {
     const apiInfo = await getApi().info()
     const bbox = apiInfo.bbox
     console.log(bbox)
@@ -50,10 +49,7 @@ async function centerMap(map: Map) {
     ];
     console.log(coordinates);
     const bboxPolygon: Polygon = new Polygon([coordinates])
-    map.getView().fit(bboxPolygon, {
-        padding: [170, 50, 30, 150],
-        maxZoom: 6
-    })
+    map.getView().fit(bboxPolygon)
     console.log("recentering map")
 }
 

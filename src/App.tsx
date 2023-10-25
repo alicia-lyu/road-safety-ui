@@ -31,7 +31,7 @@ import usePathsLayer from '@/layers/UsePathsLayer'
 import ContextMenu from '@/layers/ContextMenu'
 import usePathDetailsLayer from '@/layers/UsePathDetailsLayer'
 import { Map } from 'ol'
-import { getMap } from '@/map/map'
+import { getMap, reCenterMap } from '@/map/map'
 import CustomModelBox from '@/sidebar/CustomModelBox'
 import useRoutingGraphLayer from '@/layers/UseRoutingGraphLayer'
 import useUrbanDensityLayer from '@/layers/UseUrbanDensityLayer'
@@ -64,7 +64,9 @@ export default function App() {
     const [mapFeatures, setMapFeatures] = useState(getMapFeatureStore().state)
     const [safetyFeatures, setSafetyFeatures] = useState(getSafetyFeatureStore().state)
 
+
     const map = getMap()
+    reCenterMap(map)
 
     useEffect(() => {
         const onSettingsChanged = () => setSettings(getSettingsStore().state)
