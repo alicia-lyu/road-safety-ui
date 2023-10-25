@@ -4,6 +4,7 @@
 import fetchMock from 'jest-fetch-mock'
 import { ErrorAction, InfoReceived, RouteRequestFailed, RouteRequestSuccess } from '@/actions/Actions'
 import { setTranslation } from '@/translation/Translation'
+import * as config from 'config'
 
 import Dispatcher from '@/stores/Dispatcher'
 import { ApiImpl } from '@/api/Api'
@@ -114,17 +115,7 @@ describe('route', () => {
             optimize: 'false',
             points_encoded: true,
             snap_preventions: ['ferry'],
-            details: [
-                'road_class',
-                'road_environment',
-                'road_access',
-                'surface',
-                'max_speed',
-                'average_speed',
-                'toll',
-                'track_type',
-                'country',
-            ],
+            details: config.request.details,
         }
 
         const mockedDispatcher = jest.spyOn(Dispatcher, 'dispatch')
@@ -158,17 +149,7 @@ describe('route', () => {
             optimize: 'false',
             points_encoded: true,
             snap_preventions: ['ferry'],
-            details: [
-                'road_class',
-                'road_environment',
-                'road_access',
-                'surface',
-                'max_speed',
-                'average_speed',
-                'toll',
-                'track_type',
-                'country',
-            ],
+            details: config.request.details,
             'alternative_route.max_paths': args.maxAlternativeRoutes,
             algorithm: 'alternative_route',
         }
@@ -211,17 +192,7 @@ describe('route', () => {
             optimize: 'false',
             points_encoded: true,
             snap_preventions: ['ferry'],
-            details: [
-                'road_class',
-                'road_environment',
-                'road_access',
-                'surface',
-                'max_speed',
-                'average_speed',
-                'toll',
-                'track_type',
-                'country',
-            ],
+            details: config.request.details,
             custom_model: args.customModel!,
             'ch.disable': true,
         }
@@ -320,17 +291,7 @@ describe('route', () => {
             optimize: 'false',
             points_encoded: true,
             snap_preventions: ['ferry'],
-            details: [
-                'road_class',
-                'road_environment',
-                'road_access',
-                'surface',
-                'max_speed',
-                'average_speed',
-                'toll',
-                'track_type',
-                'country',
-            ],
+            details: config.request.details,
         }
 
         const mockedDispatcher = jest.spyOn(Dispatcher, 'dispatch')

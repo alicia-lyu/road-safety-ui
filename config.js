@@ -19,17 +19,14 @@ const config = {
     // if true there will be an option to enable the GraphHopper routing graph and the urban density visualization in the layers menu
     routingGraphLayerAllowed: false,
     // parameters used for the routing request generation
+    
     request: {
         details: [
             'road_class',
             'road_environment',
             'road_access',
-            'surface',
             'max_speed',
-            'average_speed',
-            'toll',
-            'track_type',
-            'country',
+            'average_speed'
         ],
         snapPreventions: ['ferry'],
     },

@@ -66,9 +66,9 @@ export default function App() {
 
 
     const map = getMap()
-    reCenterMap(map)
 
     useEffect(() => {
+        reCenterMap(map)
         const onSettingsChanged = () => setSettings(getSettingsStore().state)
         const onQueryChanged = () => setQuery(getQueryStore().state)
         const onInfoChanged = () => setInfo(getApiInfoStore().state)
