@@ -3,7 +3,7 @@
  */
 const config = {
     // the url of the GraphHopper routing backend, either use graphhopper.com or point it to your own GH instance
-    routingApi: 'https://graphhopper.com/api/1/',
+    routingApi: 'http://localhost:8989/',
     // the url of the geocoding backend, either use graphhopper.com or point it to another geocoding service. use an empty string to disable the address search
     geocodingApi: 'https://graphhopper.com/api/1/',
     // the tile layer used by default, see MapOptionsStore.ts for all options
@@ -37,7 +37,7 @@ const config = {
     // names or in the wrong order. The key of each profile will be used as name and the given fields will overwrite the fields of the
     // default routing request. e.g.
     //
-    // profiles: { my_car: { profile: 'raw_car' } }
+    // profiles: { car: { profile: 'car' } }
     //
     // will add a profile named 'my_car' for which we send a request with profile=raw_car, and you could add other parameters like custom_model.
 }
