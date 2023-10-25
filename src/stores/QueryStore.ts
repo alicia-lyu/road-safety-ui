@@ -23,8 +23,6 @@ import { Bbox, RoutingArgs, RoutingProfile } from '@/api/graphhopper'
 import { calcDist } from '@/distUtils'
 import config from 'config'
 import { customModel2prettyString, customModelExamples } from '@/sidebar/CustomModelExamples'
-import { calcGaussianRandom } from './utils'
-import middlePoints, { PointOfInterest } from './middlePoints'
 
 export interface Coordinate {
     lat: number
@@ -45,7 +43,6 @@ export interface QueryStoreState {
     readonly customModelEnabled: boolean
     readonly customModelStr: string
     readonly safeRoutingEnabled: boolean
-    readonly participantId: number
 }
 
 export interface QueryPoint {
@@ -113,14 +110,13 @@ export default class QueryStore extends Store<QueryStoreState> {
             currentRequest: {
                 subRequests: [],
             },
-            maxAlternativeRoutes: 4,
+            maxAlternativeRoutes: 3,
             routingProfile: {
                 name: '',
             },
             customModelEnabled: customModelEnabledInitially,
             customModelStr: initialCustomModelStr,
             safeRoutingEnabled: true,
-            participantId: 0
         }
     }
 
@@ -295,6 +291,7 @@ export default class QueryStore extends Store<QueryStoreState> {
             const newState: QueryStoreState = {
                 ...state,
                 safeRoutingEnabled: !state.safeRoutingEnabled,
+                maxAlternativeRoutes: state.safeRoutingEnabled ? 3 : state.maxAlternativeRoutes,
             }
             return this.routeIfReady(newState, true)
         }
@@ -365,54 +362,14 @@ export default class QueryStore extends Store<QueryStoreState> {
                 }
             } else {
                 // with safe routing mode
-                // We first send a fast request without alternatives 
-                // which returns a result of fastest
-                const firstFastRequest = QueryStore.buildRouteRequest({
+                // We send a request and let it return 3 alternatives.
+                const secondRequest = QueryStore.buildRouteRequest(state)
+                requests = [secondRequest]
+
+                return {
                     ...state,
-                    maxAlternativeRoutes: 1
-                })
-                requests = [firstFastRequest]
-
-                // ... and then a second, slower request including alternatives if they are enabled.
-                if (
-                    state.queryPoints.length === 2 &&
-                    state.maxAlternativeRoutes > 1 &&
-                    (ApiImpl.isMotorVehicle(state.routingProfile.name) || maxDistance < 500_000)
-                ) {
-                    const secondRequest = QueryStore.buildRouteRequest(state)
-                    requests.push(secondRequest)
+                    currentRequest: { subRequests: this.send(requests, zoom) },
                 }
-
-                // then 3 more slower request including alternatives (max. 4 in total)
-                // with different middle points
-                // if there are only 2 points set
-                if (state.queryPoints.length === 2) {
-                    const middlePointsChosen = QueryStore.chooseMiddlePoints(
-                        state.queryPoints[0].coordinate,
-                        state.queryPoints[1].coordinate,
-                        state
-                    )
-                    for (const middlePoint of middlePointsChosen) {
-                        const middlePointRequest = QueryStore.buildRouteRequest({
-                            ...state,
-                            queryPoints: [
-                                state.queryPoints[0],
-                                {
-                                    ...state.queryPoints[1],
-                                    coordinate: middlePoint.coordinate,
-                                    queryText: middlePoint.queryText,
-                                },
-                                state.queryPoints[1]
-                            ],
-                        })
-                        requests.push(middlePointRequest)
-                    }
-                }
-            }
-
-            return {
-                ...state,
-                currentRequest: { subRequests: this.send(requests, zoom) },
             }
         }
         return state
@@ -530,21 +487,6 @@ export default class QueryStore extends Store<QueryStoreState> {
             type: type,
         }
     }
-
-    private static chooseMiddlePoints(point1: Coordinate, point2: Coordinate, state: QueryStoreState) {
-        const mid: Coordinate = {
-            lat: (point1.lat + point2.lat) / 2,
-            lng: (point1.lng + point2.lng) / 2,
-        }
-
-        const middlePointsSorted = middlePoints[state.participantId].slice();
-        middlePointsSorted.sort((middlePoint1, middlePoint2) => {
-            return calcDistance(mid, middlePoint1.coordinate) - calcDistance(mid, middlePoint2.coordinate)
-        })
-
-        console.log(middlePointsSorted);
-        return middlePointsSorted.slice(0, 3);
-    }
 }
 
 function replace<T>(array: T[], compare: { (element: T): boolean }, provider: { (element: T): T }) {
@@ -565,8 +507,4 @@ function getMaxDistance(queryPoints: QueryPoint[]): number {
         max = Math.max(dist, max)
     }
     return max
-}
-
-function calcDistance(point1: Coordinate, point2: Coordinate) {
-    return (point1.lat - point2.lat) ** 2 + (point1.lng - point2.lng) ** 2
 }
