@@ -227,9 +227,9 @@ function LargeScreenLayout({ query, route, map, error, mapOptions, encodedValues
                 <MapComponent map={map} />
             </div>
 
-            <div className={styles.pathDetails}>
+            {/* <div className={styles.pathDetails}>
                 <PathDetails selectedPath={route.selectedPath} />
-            </div>
+            </div> */}
         </>
     )
 }
