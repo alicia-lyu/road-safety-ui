@@ -199,9 +199,7 @@ export default class RouteStore extends Store<RouteStoreState> {
     private isStaleRequest(request: RoutingArgs) {
         const subRequests = this.queryStore.state.currentRequest.subRequests
         for (const subRequest of subRequests) {
-            if (JSONCompare(subRequest.args, request)) {
-                return false
-            }
+            if (JSONCompare(subRequest.args.points, request.points)) return false
         }
         return true
     }
